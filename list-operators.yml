@@ -1,0 +1,25 @@
+- hosts: localhost
+  gather_facts: false
+  vars_files:
+  - roles/olm_disconnected/vars/main.yml
+  tasks:
+  - uri:
+      url: https://quay.io/cnr/api/v1/packages?namespace={{ remote_app_ns }}
+      return_content: yes
+    register: packages
+
+  - name: Initialize operator list
+    set_fact:
+      operators: []
+
+  - name: Generate operator list 
+    set_fact:
+      operators: "{{ operators + new_item }}"
+    vars:
+      new_item:
+      - "{{ item.name.split('/')[-1] }}"
+    with_items: "{{ packages.json }}" 
+
+
+  - debug:
+      var: operators|sort

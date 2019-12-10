@@ -1,0 +1,137 @@
+- name: Set exposed_registry
+  set_fact:
+    exposed_registry: "{{ local_registry }}"
+
+- when: local_registry == "image-registry.openshift-image-registry.svc:5000"
+  block:
+  - name: Expose OpenShift internal registry
+    shell: oc patch configs.imageregistry.operator.openshift.io/cluster -p='{"spec":{"defaultRoute":true}}' --type=merge
+
+  - name: Wait for registry route to be available
+    shell: oc get images.config.openshift.io -o yaml | egrep -o 'default-route.*$'
+    register: registry_route
+    retries: 20
+    delay: 3
+    until: registry_route.rc == 0
+
+  - name: Update exposed_registry
+    set_fact:
+      exposed_registry: "{{ registry_route.stdout }}"
+
+  - name: Create registry service account
+    k8s:
+      state: present
+      definition: "{{ lookup('file', 'registry.sa.yml') }}"
+
+  - name: Get registry service account token
+    shell: oc sa -n openshift-marketplace get-token registry
+    register: mig_registry_sa_token
+
+  - block:
+    - name: Docker login to internal OpenShift registry
+      shell: docker login {{ registry_route.stdout }}  -u registry -p {{ mig_registry_sa_token.stdout }}
+    rescue:
+    - pause:
+        prompt: Add {{ registry_route.stdout }} to your insecure regisries, restart docker, then press return to try again
+
+    - name: Docker login to internal OpenShift registry
+      shell: docker login {{ registry_route.stdout }}  -u registry -p {{ mig_registry_sa_token.stdout }}
+
+  - name: Create namespaces for internal registry
+    k8s:
+      state: present
+      definition: "{{ lookup('template', 'namespace.yml.j2') }}"
+    with_items:
+    - "{{ local_registry_ns }}"
+
+  - name: Add local_registry_ns permissions
+    shell: oc policy add-role-to-group system:image-puller system:serviceaccounts:{{ deployment_namespace }} --namespace={{ local_registry_ns }}
+
+- name: Disable default catalog
+  shell: "oc patch OperatorHub cluster --type json -p '[{\"op\": \"add\", \"path\": \"/spec/disableAllDefaultSources\", \"value\": true}]'"
+
+- name: Create the deployment namespace
+  k8s:
+    state: present
+    definition: "{{ lookup('template', 'namespace.yml.j2') }}"
+  with_items:
+  - "{{ deployment_namespace }}"
+
+- name: Make temp directory
+  tempfile:
+    state: directory
+    suffix: mig_olm_disconnected
+  register: tmp_dir
+
+- name: Get operator metadata
+  shell: |
+         curl -s -XGET https://quay.io/cnr/api/v1/packages/{{ remote_app_ns }}/{{ item }}/blobs/sha256/$(curl https://quay.io/cnr/api/v1/packages/{{ remote_app_ns }}/{{ item }}/$(curl -s https://quay.io/cnr/api/v1/packages?namespace={{ remote_app_ns }} | jq -r ".[] | select(.name == \"{{ remote_app_ns }}/{{ item }}\") | .default") | jq -r .[0].content.digest) -o {{ item }}.tar.gz
+  args:
+    chdir: "{{ tmp_dir.path }}"
+    warn: false
+  with_items: "{{ operators }}"
+
+- name: Create catalog directory structure
+  file:
+    path: "{{ tmp_dir.path }}/manifests/{{ item }}"
+    state: directory
+  with_items: "{{ operators }}"
+
+- name: Extract operator metadata
+  shell: "bsdtar --strip-components 1 -xf {{ item }}.tar.gz -C manifests/{{ item }}/"
+  args:
+    chdir: "{{ tmp_dir.path }}"
+  with_items: "{{ operators }}"
+
+- name: Copy custom-registry Dockerfile into place
+  copy:
+    src: Dockerfile
+    dest: "{{ tmp_dir.path }}/Dockerfile"
+
+- name: Build custom-registry
+  shell: docker build -f Dockerfile -t {{ exposed_registry }}/{{ local_registry_ns }}/custom-registry .
+  args:
+    chdir: "{{ tmp_dir.path }}"
+
+- name: Push custom-registry
+  shell: docker push {{ exposed_registry }}/{{ local_registry_ns }}/custom-registry
+  args:
+    chdir: "{{ tmp_dir.path }}"
+
+- name: Create custom registry
+  k8s:
+    state: present
+    definition: "{{ lookup('template', 'cam-catalog.yml.j2') }}"
+
+- name: Create image content source policies
+  k8s:
+    state: present
+    definition: "{{ lookup('template', 'image-content-source-policy.yml.j2') }}"
+  with_items: "{{ images }}"
+
+- name: Initialize resolved_images list
+  set_fact:
+    resolved_images: []
+
+- include_tasks: get_sha.yml
+  loop: "{{ images }}"
+  loop_control:
+    loop_var: image
+  vars:
+    tmp_dir_path: "{{ tmp_dir.path }}"
+
+- name: Mirror images
+  shell: |
+         oc image mirror --insecure=true {{ remote_registry }}/{{ item.name }}@sha256:{{ item.sha }} \
+                                         {{ exposed_registry }}/{{ local_registry_ns }}/{{ item.name.split("/")[-1] }}:latest
+  args:
+  with_items: "{{ resolved_images }}"
+  when: use_shas
+
+- name: Mirror images
+  shell: |
+         oc image mirror --insecure=true {{ remote_registry }}/{{ item.name }}:{{ item.sha }} \
+                                         {{ exposed_registry }}/{{ local_registry_ns }}/{{ item.name.split("/")[-1] }}:{{ item.sha }}
+  args:
+  with_items: "{{ resolved_images }}"
+  when: not use_shas

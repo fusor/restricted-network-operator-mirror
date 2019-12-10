@@ -1,0 +1,4 @@
+exposed_registry: $local_registry
+remote_registry: registry.redhat.io
+remote_app_registry: quay.io
+remote_app_ns: redhat-operators

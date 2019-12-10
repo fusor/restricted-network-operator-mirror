@@ -1,0 +1,9 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: cam-catalog
+  namespace: openshift-migration
+spec:
+  displayName: CAM Catalog
+  sourceType: grpc
+  image: "{{ local_registry }}/{{ local_registry_ns }}/custom-registry:latest"

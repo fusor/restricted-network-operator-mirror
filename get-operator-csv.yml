@@ -1,0 +1,75 @@
+- hosts: localhost
+  gather_facts: false
+  vars_files:
+  - roles/olm_disconnected/vars/main.yml
+  - config.yml
+  tasks:
+  - uri:
+      url: https://quay.io/cnr/api/v1/packages?namespace={{ remote_app_ns }}
+      return_content: yes
+    register: packages
+
+  - name: Initialize lists
+    set_fact:
+      operator_versions: []
+      operator_digests: []
+
+  - name: Generate operator version list
+    set_fact:
+      operator_versions: "{{ operator_versions + new_item }}"
+    vars:
+      new_item:
+      - {'name': '{{ item.name.split("/")[-1] }}', 'version': '{{ item.default }}'}
+    with_items: "{{ packages.json }}" 
+    when: item.name.split('/')[-1] in operators
+
+  - name: Get operator details
+    uri:
+      url: https://quay.io/cnr/api/v1/packages/{{ remote_app_ns }}/{{ item.name }}/{{ item.version }}
+    register: operator_details
+    with_items: "{{ operator_versions }}"
+
+  - name: Generate operator digest list
+    set_fact:
+      operator_digests: "{{ operator_digests + new_item }}"
+    vars:
+      new_item:
+      - {'name': '{{ item.item.name }}', 'version': '{{ item.item.version }}', 'digest': '{{ item.json[0].content.digest }}'}
+    with_items: "{{ operator_details.results }}"
+
+  - name: Make temp directory
+    tempfile:
+      state: directory
+      suffix: olm_disconnected
+    register: tmp_dir
+
+  - name: Get metadata tarball
+    get_url:
+      url: https://quay.io/cnr/api/v1/packages/{{ remote_app_ns }}/{{ item.name }}/blobs/sha256/{{ item.digest }}
+      dest: "{{ tmp_dir.path }}/{{ item.name }}.tar.gz"
+    with_items: "{{ operator_digests }}"
+
+  - name: Create catalog directory structure
+    file:
+      path: "{{ tmp_dir.path }}/manifests/{{ item }}"
+      state: directory
+    with_items: "{{ operators }}"
+
+  - name: Extract operator metadata
+    shell: "bsdtar --strip-components 1 -xf {{ item }}.tar.gz -C manifests/{{ item }}/"
+    args:
+      chdir: "{{ tmp_dir.path }}"
+    with_items: "{{ operators }}"
+ 
+  - name: Find CSVs
+    find:
+      paths: "{{ tmp_dir.path }}/manifests"
+      patterns: '*clusterserviceversion*'
+      recurse: true
+    register: csvs
+
+  - name: Copy CSVs
+    copy:
+      src: "{{ item.path }}"
+      dest: ./
+    with_items: "{{ csvs.files }}"

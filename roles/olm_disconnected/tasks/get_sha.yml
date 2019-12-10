@@ -1,0 +1,12 @@
+- name: Get {{ image.name }} SHA
+  shell: "{{ image.find_sha_cmd }}"
+  args:
+    chdir: "{{ tmp_dir_path }}"
+  register: sha
+
+- name: Add {{ image.name }} to resolve_image list
+  set_fact:
+    resolved_images: "{{ resolved_images + new_item }}"
+  vars:
+    new_item: 
+    - {'name': '{{ image.name }}', 'sha': '{{ sha.stdout }}'}
