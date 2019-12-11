@@ -14,3 +14,11 @@ remote_app_ns:
   ns: certified-operators
   remote_registry: registry.redhat.io
   source_registry: registry.redhat.io
+- name: stage
+  ns: redhat-operators-stage
+  remote_registry: registry.stage.redhat.io
+  source_registry: registry.stage.redhat.io
+- name: dev
+  ns: rh-osbs-operators
+  remote_registry: image-registry.openshift-image-registry.svc:5000
+  source_registry: registry-proxy.engineering.redhat.com
