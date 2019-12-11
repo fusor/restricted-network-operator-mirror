@@ -4,9 +4,18 @@
     chdir: "{{ tmp_dir_path }}"
   register: sha
 
+- name: Set source image name
+  set_fact:
+    source_name: "{{ image.name }}"
+
+- name: Update source image name
+  set_fact:
+    source_name: "{{ image.source_name }}"
+  when: image.source_name is defined
+
 - name: Add {{ image.name }} to resolve_image list
   set_fact:
     resolved_images: "{{ resolved_images + new_item }}"
   vars:
     new_item: 
-    - {'name': '{{ image.name }}', 'sha': '{{ sha.stdout }}'}
+    - {'name': '{{ image.name }}', 'sha': '{{ sha.stdout }}', 'source_name': '{{ source_name }}'}

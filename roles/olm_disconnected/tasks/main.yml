@@ -25,17 +25,17 @@
 
   - name: Get registry service account token
     shell: oc sa -n openshift-marketplace get-token registry
-    register: mig_registry_sa_token
+    register: registry_sa_token
 
   - block:
     - name: Docker login to internal OpenShift registry
-      shell: docker login {{ registry_route.stdout }}  -u registry -p {{ mig_registry_sa_token.stdout }}
+      shell: docker login {{ registry_route.stdout }}  -u registry -p {{ registry_sa_token.stdout }}
     rescue:
     - pause:
         prompt: Add {{ registry_route.stdout }} to your insecure regisries, restart docker, then press return to try again
 
     - name: Docker login to internal OpenShift registry
-      shell: docker login {{ registry_route.stdout }}  -u registry -p {{ mig_registry_sa_token.stdout }}
+      shell: docker login {{ registry_route.stdout }}  -u registry -p {{ registry_sa_token.stdout }}
 
   - name: Create namespaces for internal registry
     k8s:
@@ -63,56 +63,37 @@
     suffix: mig_olm_disconnected
   register: tmp_dir
 
-- uri:
-    url: https://quay.io/cnr/api/v1/packages?namespace={{ remote_app_ns }}
-    return_content: yes
-  register: packages
+- include_tasks: get_operator.yml
+  loop: "{{ operators }}"
+  loop_control:
+    loop_var: operator
+  vars:
+    tmp_dir_path: "{{ tmp_dir.path }}"
 
 - name: Initialize lists
   set_fact:
     operator_versions: []
     operator_digests: []
 
-- name: Generate operator version list
-  set_fact:
-    operator_versions: "{{ operator_versions + new_item }}"
-  vars:
-    new_item:
-    - {'name': '{{ item.name.split("/")[-1] }}', 'version': '{{ item.default }}'}
-  with_items: "{{ packages.json }}"
-  when: item.name.split('/')[-1] in operators
-
-- name: Get operator details
-  uri:
-    url: https://quay.io/cnr/api/v1/packages/{{ remote_app_ns }}/{{ item.name }}/{{ item.version }}
-  register: operator_details
-  with_items: "{{ operator_versions }}"
-
-- name: Generate operator digest list
-  set_fact:
-    operator_digests: "{{ operator_digests + new_item }}"
-  vars:
-    new_item:
-    - {'name': '{{ item.item.name }}', 'version': '{{ item.item.version }}', 'digest': '{{ item.json[0].content.digest }}'}
-  with_items: "{{ operator_details.results }}"
-
-- name: Get metadata tarball
-  get_url:
-    url: https://quay.io/cnr/api/v1/packages/{{ remote_app_ns }}/{{ item.name }}/blobs/sha256/{{ item.digest }}
-    dest: "{{ tmp_dir.path }}/{{ item.name }}.tar.gz"
-  with_items: "{{ operator_digests }}"
-
 - name: Create catalog directory structure
   file:
-    path: "{{ tmp_dir.path }}/manifests/{{ item }}"
+    path: "{{ tmp_dir.path }}/manifests/{{ item.name }}"
     state: directory
   with_items: "{{ operators }}"
 
 - name: Extract operator metadata
-  shell: "bsdtar --strip-components 1 -xf {{ item }}.tar.gz -C manifests/{{ item }}/"
+  shell: "bsdtar --strip-components 1 -xf {{ item.name }}.tar.gz -C manifests/{{ item.name }}/"
   args:
     chdir: "{{ tmp_dir.path }}"
   with_items: "{{ operators }}"
+
+- include_tasks: fix_csvs.yml
+  loop: "{{ operators }}"
+  loop_control:
+    loop_var: operator
+  vars:
+    tmp_dir_path: "{{ tmp_dir.path }}"
+  when: operator.type == "dev" or operator.type == "stage"
 
 - name: Copy custom-registry Dockerfile into place
   copy:
@@ -132,37 +113,11 @@
 - name: Create custom registry
   k8s:
     state: present
-    definition: "{{ lookup('template', 'cam-catalog.yml.j2') }}"
+    definition: "{{ lookup('template', 'catalog.yml.j2') }}"
 
-- name: Create image content source policies
-  k8s:
-    state: present
-    definition: "{{ lookup('template', 'image-content-source-policy.yml.j2') }}"
-  with_items: "{{ images }}"
-
-- name: Initialize resolved_images list
-  set_fact:
-    resolved_images: []
-
-- include_tasks: get_sha.yml
-  loop: "{{ images }}"
+- include_tasks: mirror_images.yml
+  loop: "{{ operators }}"
   loop_control:
-    loop_var: image
+    loop_var: operator
   vars:
     tmp_dir_path: "{{ tmp_dir.path }}"
-
-- name: Mirror images
-  shell: |
-         oc image mirror --insecure=true {{ remote_registry }}/{{ item.name }}@sha256:{{ item.sha }} \
-                                         {{ exposed_registry }}/{{ local_registry_ns }}/{{ item.name.split("/")[-1] }}:latest
-  args:
-  with_items: "{{ resolved_images }}"
-  when: use_shas
-
-- name: Mirror images
-  shell: |
-         oc image mirror --insecure=true {{ remote_registry }}/{{ item.name }}:{{ item.sha }} \
-                                         {{ exposed_registry }}/{{ local_registry_ns }}/{{ item.name.split("/")[-1] }}:{{ item.sha }}
-  args:
-  with_items: "{{ resolved_images }}"
-  when: not use_shas

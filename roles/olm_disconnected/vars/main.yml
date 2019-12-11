@@ -1,5 +1,5 @@
 exposed_registry: $local_registry
-remote_registry: registry.redhat.io
+QUAY_TOKEN: "{{ lookup( 'env', 'QUAY_TOKEN') | default('') }}"
 remote_app_registry: quay.io
 remote_app_ns:
 - name: redhat
@@ -14,11 +14,3 @@ remote_app_ns:
   ns: certified-operators
   remote_registry: registry.redhat.io
   source_registry: registry.redhat.io
-- name: stage
-  ns:
-  remote_registry:
-  source_registry:
-- name: dev
-  ns:
-  remote_registry:
-  source_registry:

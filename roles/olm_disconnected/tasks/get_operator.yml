@@ -1,0 +1,32 @@
+- set_fact:
+    ns: "{{ remote_app_ns | selectattr('name', 'equalto', operator.type) | map(attribute='ns') | list | first }}"
+
+- uri:
+    url: https://quay.io/cnr/api/v1/packages?namespace={{ ns }}
+    return_content: yes
+    headers:
+      Authorization: "{{ QUAY_TOKEN }}"
+  register: packages
+
+- set_fact:
+    combined_name: "{{ ns }}/{{ operator.name }}"
+
+- set_fact:
+    default: "{{ packages.json | selectattr('name', 'equalto', combined_name) | map(attribute='default') | list | first }}"
+
+- name: Get operator details
+  uri:
+    url: https://quay.io/cnr/api/v1/packages/{{ ns }}/{{ operator.name }}/{{ default }}
+    headers:
+      Authorization: "{{ QUAY_TOKEN }}"
+  register: operator_details
+
+- set_fact:
+    digest: "{{ operator_details.json[0].content.digest }}"
+
+- name: Get metadata tarball
+  get_url:
+    url: https://quay.io/cnr/api/v1/packages/{{ ns }}/{{ operator.name }}/blobs/sha256/{{ digest }}
+    dest: "{{ tmp_dir.path }}/{{ operator.name }}.tar.gz"
+    headers:
+      Authorization: "{{ QUAY_TOKEN }}"

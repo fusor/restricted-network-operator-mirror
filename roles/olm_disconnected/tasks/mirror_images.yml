@@ -1,0 +1,52 @@
+- name: Initialize resolved_images list
+  set_fact:
+    resolved_images: []
+
+- name: Add predefined resolved_images to the resolve_images list
+  set_fact:
+    resolved_images: "{{ operator.resolved_images + new_item }}"
+  when: operator.resolved_images is defined
+
+- include_tasks: get_sha.yml
+  loop: "{{ operator.images }}"
+  loop_control:
+    loop_var: image
+  vars:
+    tmp_dir_path: "{{ tmp_dir.path }}"
+  when: operator.images is defined
+
+- name: Create image content source policies
+  k8s:
+    state: present
+    definition: "{{ lookup('template', 'image-content-source-policy.yml.j2') }}"
+  with_items: "{{ resolved_images }}"
+  vars:
+    remote_registry: "{{ remote_app_ns | selectattr('name', 'equalto', operator.type) | map(attribute='remote_registry') | list | first }}"
+
+- name: Mirror SHA images
+  shell: |
+         oc image mirror --insecure=true {{ source_registry }}/{{ item.source_name }}@sha256:{{ item.sha }} \
+                                         {{ exposed_registry }}/{{ local_registry_ns }}/{{ item.name.split("/")[-1] }}:latest
+  args:
+  with_items: "{{ resolved_images }}"
+  when: operator.use_shas
+  vars:
+    source_registry: "{{ remote_app_ns | selectattr('name', 'equalto', operator.type) | map(attribute='source_registry') | list | first }}"
+  retries: 20
+  delay: 10
+  register: result
+  until: result.rc == 0
+
+- name: Mirror tagged images
+  shell: |
+         oc image mirror --insecure=true {{ source_registry }}/{{ item.source_name }}:{{ item.sha }} \
+                                         {{ exposed_registry }}/{{ local_registry_ns }}/{{ item.name.split("/")[-1] }}:{{ item.sha }}
+  args:
+  with_items: "{{ resolved_images }}"
+  when: not operator.use_shas
+  vars:
+    source_registry: "{{ remote_app_ns | selectattr('name', 'equalto', operator.type) | map(attribute='source_registry') | list | first }}"
+  retries: 20
+  delay: 10
+  register: result
+  until: result.rc == 0

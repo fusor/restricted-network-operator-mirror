@@ -1,0 +1,26 @@
+local_registry: image-registry.openshift-image-registry.svc:5000
+local_registry_ns: mirrored-images
+deployment_namespace: openshift-migration
+operators:
+- name: "cam-operator"
+  type: "redhat"
+  use_shas: false
+  resolved_images:
+  - name: "rhcam-1-0/openshift-migration-rhel7-operator"
+    source_name: "rhcam-1-0/openshift-migration-rhel7-operator"
+    sha: v1.0
+  - name: "rhcam-1-0/openshift-migration-controller-rhel8"
+    source_name: "rhcam-1-0/openshift-migration-controller-rhel8"
+    sha: v1.0
+  - name: "rhcam-1-0/openshift-migration-ui-rhel8"
+    source_name: "rhcam-1-0/openshift-migration-ui-rhel8"
+    sha: v1.0
+  - name: "rhcam-1-0/openshift-migration-velero-rhel8"
+    source_name: "rhcam-1-0/openshift-migration-velero-rhel8"
+    sha: v1.0
+  - name: "rhcam-1-0/openshift-migration-plugin-rhel8"
+    source_name: "rhcam-1-0/openshift-migration-velero-rhel8"
+    sha: v1.0
+  - name: "rhcam-1-0/openshift-migration-velero-restic-restore-helper-rhel8"
+    source_name: "rhcam-1-0/openshift-migration-velero-restic-restore-helper-rhel8"
+    sha: v1.0
