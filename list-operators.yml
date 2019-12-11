@@ -60,6 +60,6 @@
   - name: Print operator list
     debug:
       msg:
-      - Red Hat: "{{ redhat|sort }}"
-      - Community: "{{ community|sort }}"
-      - Certified: "{{ certified|sort }}"
+      - redhat: "{{ redhat|sort }}"
+      - community: "{{ community|sort }}"
+      - certified: "{{ certified|sort }}"
