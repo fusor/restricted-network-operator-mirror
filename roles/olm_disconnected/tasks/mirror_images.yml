@@ -2,9 +2,9 @@
   set_fact:
     resolved_images: []
 
-- name: Add predefined resolved_images to the resolve_images list
+- name: Add predefined resolved_images to the resolved_images list
   set_fact:
-    resolved_images: "{{ operator.resolved_images + new_item }}"
+    resolved_images: "{{ resolved_images + operator.resolved_images }}"
   when: operator.resolved_images is defined
 
 - include_tasks: get_sha.yml
@@ -25,7 +25,7 @@
 
 - name: Mirror SHA images
   shell: |
-         oc image mirror --insecure=true {{ source_registry }}/{{ item.source_name }}@sha256:{{ item.sha }} \
+         oc image mirror --insecure=true {{ source_registry }}/{{ item.source_name | default(item.name) }}@sha256:{{ item.sha }} \
                                          {{ exposed_registry }}/{{ local_registry_ns }}/{{ item.name.split("/")[-1] }}:latest
   args:
   with_items: "{{ resolved_images }}"
@@ -39,7 +39,7 @@
 
 - name: Mirror tagged images
   shell: |
-         oc image mirror --insecure=true {{ source_registry }}/{{ item.source_name }}:{{ item.sha }} \
+         oc image mirror --insecure=true {{ source_registry }}/{{ item.source_name | default(item.name) }}:{{ item.sha }} \
                                          {{ exposed_registry }}/{{ local_registry_ns }}/{{ item.name.split("/")[-1] }}:{{ item.sha }}
   args:
   with_items: "{{ resolved_images }}"

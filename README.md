@@ -25,4 +25,3 @@ Note: If you leave the values for these two parameters the internal OpenShift re
 
 ## TODO
 * There are quite a few shell commands that can probably be updated to use other ansible modules in order to work more smoothly
-* resolved_images usage needs to be tested.
