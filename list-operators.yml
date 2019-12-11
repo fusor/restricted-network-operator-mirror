@@ -3,23 +3,63 @@
   vars_files:
   - roles/olm_disconnected/vars/main.yml
   tasks:
-  - uri:
-      url: https://quay.io/cnr/api/v1/packages?namespace={{ remote_app_ns }}
+  - name: Initialize operator list
+    set_fact:
+      redhat: []
+      community: []
+      certified: []
+
+  - name: Download Red Hat package data
+    uri:
+      url: https://quay.io/cnr/api/v1/packages?namespace=redhat-operators
       return_content: yes
     register: packages
 
-  - name: Initialize operator list
+  - name: Generate Red Hat operator list 
     set_fact:
-      operators: []
-
-  - name: Generate operator list 
-    set_fact:
-      operators: "{{ operators + new_item }}"
+      redhat: "{{ redhat + new_item }}"
     vars:
       new_item:
       - "{{ item.name.split('/')[-1] }}"
     with_items: "{{ packages.json }}" 
+    loop_control: 
+      label: "{{ item.name }}"
 
+  - name: Download community package data
+    uri:
+      url: https://quay.io/cnr/api/v1/packages?namespace=community-operators
+      return_content: yes
+    register: packages
 
-  - debug:
-      var: operators|sort
+  - name: Generate community operator list 
+    set_fact:
+      community: "{{ community + new_item }}"
+    vars:
+      new_item:
+      - "{{ item.name.split('/')[-1] }}"
+    with_items: "{{ packages.json }}" 
+    loop_control:
+      label: "{{ item.name }}"
+
+  - name: Download certified package data
+    uri:
+      url: https://quay.io/cnr/api/v1/packages?namespace=certified-operators
+      return_content: yes
+    register: packages
+
+  - name: Generate certified operator list 
+    set_fact:
+      certified: "{{ certified + new_item }}"
+    vars:
+      new_item:
+      - "{{ item.name.split('/')[-1] }}"
+    with_items: "{{ packages.json }}" 
+    loop_control:
+      label: "{{ item.name }}"
+
+  - name: Print operator list
+    debug:
+      msg:
+      - Red Hat: "{{ redhat|sort }}"
+      - Community: "{{ community|sort }}"
+      - Certified: "{{ certified|sort }}"

@@ -1,4 +1,24 @@
 exposed_registry: $local_registry
 remote_registry: registry.redhat.io
 remote_app_registry: quay.io
-remote_app_ns: redhat-operators
+remote_app_ns:
+- name: redhat
+  ns: redhat-operators
+  remote_registry: registry.redhat.io
+  source_registry: registry.redhat.io
+- name: community
+  ns: community-operators
+  remote_registry: registry.redhat.io
+  source_registry: registry.redhat.io
+- name: certified
+  ns: certified-operators
+  remote_registry: registry.redhat.io
+  source_registry: registry.redhat.io
+- name: stage
+  ns:
+  remote_registry:
+  source_registry:
+- name: dev
+  ns:
+  remote_registry:
+  source_registry:
