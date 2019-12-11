@@ -20,9 +20,9 @@ Note: If you leave the values for these two parameters the internal OpenShift re
 * Update the `operators` list with the operators you wish to mirror
 * Update `use_shas` to match whichever the operator uses. Going forward SHAs will be the standard
 * Update `deployment_namespace` with the namespace you want to deploy the operator to
-* Update `images` with the image names and a command for finding the image tags/SHAs.
+* Update `images` with the image names and a command for finding the image tags/SHAs. See `config.yml.cam-operator-1.0.1-example` as an example
+* Alternatively provide a list of resolved_images. See `config.yml.cam-operator-1.0.0-example` as an example
 
 ## TODO
 * There are quite a few shell commands that can probably be updated to use other ansible modules in order to work more smoothly
-* Implement/test the alternative approach of just providing a resolve_images list with sha's already filled in. It may be less tedious than producing commands to get tags or SHAs
-* Make it easier to get commuity and certified operators as well
+* resolve_images needs to be test.
