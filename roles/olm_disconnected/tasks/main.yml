@@ -4,8 +4,15 @@
 
 - when: local_registry == "image-registry.openshift-image-registry.svc:5000"
   block:
+
+  - name: Check for registry default route
+    shell: oc get images.config.openshift.io -o yaml | egrep -o 'default-route.*$'
+    register: registry_route
+    failed_when: registry_route.rc >= 2
+
   - name: Expose OpenShift internal registry
     shell: oc patch configs.imageregistry.operator.openshift.io/cluster -p='{"spec":{"defaultRoute":true}}' --type=merge
+    when: registry_route == ""
 
   - name: Wait for registry route to be available
     shell: oc get images.config.openshift.io -o yaml | egrep -o 'default-route.*$'

@@ -15,13 +15,15 @@
     tmp_dir_path: "{{ tmp_dir.path }}"
   when: operator.images is defined
 
+- name: Update remote_registry
+  set_fact:
+    remote_registry: "{{ remote_app_ns | selectattr('name', 'equalto', operator.type) | map(attribute='remote_registry') | list | first }}"
+
 - name: Create image content source policies
   k8s:
     state: present
     definition: "{{ lookup('template', 'image-content-source-policy.yml.j2') }}"
   with_items: "{{ resolved_images }}"
-  vars:
-    remote_registry: "{{ remote_app_ns | selectattr('name', 'equalto', operator.type) | map(attribute='remote_registry') | list | first }}"
 
 - name: Mirror SHA images
   shell: |
