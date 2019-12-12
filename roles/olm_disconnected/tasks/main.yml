@@ -5,14 +5,8 @@
 - when: local_registry == "image-registry.openshift-image-registry.svc:5000"
   block:
 
-  - name: Check for registry default route
-    shell: oc get images.config.openshift.io -o yaml | egrep -o 'default-route.*$'
-    register: registry_route
-    failed_when: registry_route.rc >= 2
-
   - name: Expose OpenShift internal registry
     shell: oc patch configs.imageregistry.operator.openshift.io/cluster -p='{"spec":{"defaultRoute":true}}' --type=merge
-    when: registry_route == ""
 
   - name: Wait for registry route to be available
     shell: oc get images.config.openshift.io -o yaml | egrep -o 'default-route.*$'
@@ -122,9 +116,22 @@
     state: present
     definition: "{{ lookup('template', 'catalog.yml.j2') }}"
 
+- name: Initialize mirrors
+  set_fact:
+    mirrors: []
+
 - include_tasks: mirror_images.yml
   loop: "{{ operators }}"
   loop_control:
     loop_var: operator
   vars:
     tmp_dir_path: "{{ tmp_dir.path }}"
+
+- name: Create image content source policies
+  k8s:
+    state: present
+    definition: "{{ lookup('template', 'image-content-source-policy.yml.j2') }}"
+
+- name: Message
+  debug:
+    msg: Note an ImageContentSourcePolicy was just created. This will cause nodes to start rebooting and cause some cluster instability while completing. For best results be patient and wait for this process to finish (it can take more than 30 minutes for a 12 node cluster).
