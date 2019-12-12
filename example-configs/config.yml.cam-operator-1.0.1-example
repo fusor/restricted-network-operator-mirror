@@ -4,10 +4,10 @@ deployment_namespace: openshift-migration
 operators:
 - name: "cam-operator"
   type: "redhat"
-  use_shas: true 
+  use_shas: true
   images:
   - name: "rhcam-1-0/openshift-migration-rhel7-operator"
-    find_sha_cmd: "grep -h image: manifests/cam-operator/v1.0.1/mig-operator.v1.0.1.clusterserviceversion.yaml | sort -u | awk -F ':' '{ print $NF }'"   
+    find_sha_cmd: "grep -h image: manifests/cam-operator/v1.0.1/mig-operator.v1.0.1.clusterserviceversion.yaml | sort -u | awk -F ':' '{ print $NF }'"
   - name: "rhcam-1-0/openshift-migration-controller-rhel8"
     find_sha_cmd: "grep MIG_CONTROLLER_TAG -A1 manifests/cam-operator/v1.0.1/mig-operator.v1.0.1.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
   - name: "rhcam-1-0/openshift-migration-ui-rhel8"
@@ -20,7 +20,7 @@ operators:
     find_sha_cmd: "grep VELERO_RESTIC_RESTORE_HELPER_TAG -A1 manifests/cam-operator/v1.0.1/mig-operator.v1.0.1.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
 - name: "ocs-operator"
   type: "redhat"
-  use_shas: true 
+  use_shas: true
   images:
   - name: "ocs4/rook-ceph-rhel8-operator"
     find_sha_cmd: "grep rook-ceph-rhel8-operator manifests/ocs-operator/4.2.0/ocs-operator.v4.2.0.clusterserviceversion.yaml | awk -F ':' '{ print $NF }'"

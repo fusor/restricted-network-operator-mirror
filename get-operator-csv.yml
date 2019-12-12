@@ -28,7 +28,7 @@
     args:
       chdir: "{{ tmp_dir.path }}"
     with_items: "{{ operators }}"
- 
+
   - name: Find CSVs
     find:
       paths: "{{ tmp_dir.path }}/manifests"

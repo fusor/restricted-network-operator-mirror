@@ -15,14 +15,14 @@
       return_content: yes
     register: packages
 
-  - name: Generate Red Hat operator list 
+  - name: Generate Red Hat operator list
     set_fact:
       redhat: "{{ redhat + new_item }}"
     vars:
       new_item:
       - "{{ item.name.split('/')[-1] }}"
-    with_items: "{{ packages.json }}" 
-    loop_control: 
+    with_items: "{{ packages.json }}"
+    loop_control:
       label: "{{ item.name }}"
 
   - name: Download community package data
@@ -31,13 +31,13 @@
       return_content: yes
     register: packages
 
-  - name: Generate community operator list 
+  - name: Generate community operator list
     set_fact:
       community: "{{ community + new_item }}"
     vars:
       new_item:
       - "{{ item.name.split('/')[-1] }}"
-    with_items: "{{ packages.json }}" 
+    with_items: "{{ packages.json }}"
     loop_control:
       label: "{{ item.name }}"
 
@@ -47,13 +47,13 @@
       return_content: yes
     register: packages
 
-  - name: Generate certified operator list 
+  - name: Generate certified operator list
     set_fact:
       certified: "{{ certified + new_item }}"
     vars:
       new_item:
       - "{{ item.name.split('/')[-1] }}"
-    with_items: "{{ packages.json }}" 
+    with_items: "{{ packages.json }}"
     loop_control:
       label: "{{ item.name }}"
 

@@ -17,5 +17,5 @@
   set_fact:
     resolved_images: "{{ resolved_images + new_item }}"
   vars:
-    new_item: 
+    new_item:
     - {'name': '{{ image.name }}', 'sha': '{{ sha.stdout }}', 'source_name': '{{ source_name }}'}
