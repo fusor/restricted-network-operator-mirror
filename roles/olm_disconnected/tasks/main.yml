@@ -134,4 +134,6 @@
 
 - name: Message
   debug:
-    msg: Note an ImageContentSourcePolicy was just created. This will cause nodes to start rebooting and cause some cluster instability while completing. For best results be patient and wait for this process to finish (it can take more than 30 minutes for a 12 node cluster). Until a check is implemented here you can watch progress with `oc describe nodes | grep worker | grep rendered` and `oc describe nodes | grep master | grep rendered`
+    msg:
+    - "Note an ImageContentSourcePolicy was just created. This will cause nodes to start rebooting and cause some cluster instability while completing. For best results be patient and wait for this process to finish (it can take more than 30 minutes for a 12 node cluster). Until a check is implemented here you can watch progress with:"
+    - "watch 'oc describe node -l node-role.kubernetes.io/worker= | grep -e Name: -e rendered'"
