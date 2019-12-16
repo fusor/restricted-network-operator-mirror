@@ -9,7 +9,7 @@
     shell: oc patch configs.imageregistry.operator.openshift.io/cluster -p='{"spec":{"defaultRoute":true}}' --type=merge
 
   - name: Wait for registry route to be available
-    shell: oc get images.config.openshift.io -o yaml | egrep -o 'default-route.*$'
+    shell: oc get images.config.openshift.io -o yaml | egrep -o 'default-route.*$' | sort -u
     register: registry_route
     retries: 20
     delay: 3
