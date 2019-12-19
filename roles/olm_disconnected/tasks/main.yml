@@ -2,7 +2,9 @@
   set_fact:
     exposed_registry: "{{ local_registry }}"
 
-- when: local_registry == "image-registry.openshift-image-registry.svc:5000"
+- when:
+  - fixed is defined
+  - local_registry == "image-registry.openshift-image-registry.svc:5000"
   block:
 
   - name: Expose OpenShift internal registry
@@ -47,6 +49,36 @@
 
   - name: Add local_registry_ns permissions
     shell: oc policy add-role-to-group system:image-puller system:serviceaccounts:{{ deployment_namespace }} --namespace={{ local_registry_ns }}
+
+#This is a workaround to using the internal registry as a mirror until we can work with an authenticated mirror
+- when: local_registry == "image-registry.openshift-image-registry.svc:5000"
+  block:
+
+  - name: Create namespaces for internal registry
+    k8s:
+      state: present
+      definition: "{{ lookup('template', 'namespace.yml.j2') }}"
+    with_items:
+    - "{{ local_registry_ns }}"
+
+  - name: Create registry
+    k8s:
+      state: present
+      definition: "{{ lookup('template', 'registry.yml.j2') }}"
+
+  - name: Get route name
+    shell: oc get route -n "{{ local_registry_ns }}" registry -o go-template={% raw -%}{{.spec.host}}{% endraw -%}
+    register: route
+
+  - name: Update local registry
+    set_fact:
+      workaround: true
+      local_registry: "{{ route.stdout }}"
+      exposed_registry: "{{ route.stdout }}"
+
+  - pause:
+      prompt: Add {{ route.stdout }} to your insecure regisries before proceeding
+    delegate_to: localhost
 
 - name: Disable default catalog
   shell: "oc patch OperatorHub cluster --type json -p '[{\"op\": \"add\", \"path\": \"/spec/disableAllDefaultSources\", \"value\": true}]'"
@@ -110,6 +142,10 @@
   shell: docker push {{ exposed_registry }}/{{ local_registry_ns }}/custom-registry
   args:
     chdir: "{{ tmp_dir.path }}"
+  retries: 6
+  delay: 20
+  register: result
+  until: result is succeeded
 
 - name: Create custom registry
   k8s:
@@ -131,6 +167,12 @@
   k8s:
     state: present
     definition: "{{ lookup('template', 'image-content-source-policy.yml.j2') }}"
+
+# Remove when internal authenticated registry works again
+- name: Add insecure registry
+  shell: |
+         oc patch images.config.openshift.io/cluster -p='{"spec":{"registrySources":{"insecureRegistries":["{{ exposed_registry }}"]}}}' --type=merge
+  when: workaround is defined
 
 - name: Message
   debug:
