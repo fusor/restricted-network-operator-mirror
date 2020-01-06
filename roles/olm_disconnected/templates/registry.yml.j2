@@ -46,7 +46,7 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 1Gi
+      storage: {{ registry_pv_size }}
 ---
 apiVersion: v1
 kind: Deployment
