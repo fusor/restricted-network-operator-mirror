@@ -76,9 +76,9 @@
       local_registry: "{{ route.stdout }}"
       exposed_registry: "{{ route.stdout }}"
 
-  - pause:
-      prompt: Add {{ route.stdout }} to your insecure regisries before proceeding
-    delegate_to: localhost
+- pause:
+    prompt: Add {{ route.stdout }} to your insecure regisries before proceeding
+  delegate_to: localhost
 
 - name: Disable default catalog
   shell: "oc patch OperatorHub cluster --type json -p '[{\"op\": \"add\", \"path\": \"/spec/disableAllDefaultSources\", \"value\": true}]'"
