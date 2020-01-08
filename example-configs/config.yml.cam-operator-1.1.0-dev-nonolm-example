@@ -1,0 +1,49 @@
+local_registry: image-registry.openshift-image-registry.svc:5000
+local_registry_ns: mirrored-images
+deployment_namespace: openshift-migration
+icsp: false
+olm: false
+persistent_registry: false
+registry_passthrough_tls: true
+operators:
+- name: "cam-operator"
+  type: "dev"
+  use_shas: true
+  images:
+  - name: "rhcam-1-1/openshift-migration-rhel7-operator"
+    source_name: "rh-osbs/rhcam-openshift-migration-operator"
+    find_sha_cmd: "grep -h image: manifests/cam-operator/v1.1.0/mig-operator.v1.1.0.clusterserviceversion.yaml | sort -u | awk -F ':' '{ print $NF }'"
+  - name: "rhcam-1-1/openshift-migration-controller-rhel8"
+    source_name: "rh-osbs/rhcam-openshift-migration-controller"
+    find_sha_cmd: "grep MIG_CONTROLLER_TAG -A1 manifests/cam-operator/v1.1.0/mig-operator.v1.1.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
+  - name: "rhcam-1-1/openshift-migration-ui-rhel8"
+    source_name: "rh-osbs/rhcam-openshift-migration-ui"
+    find_sha_cmd: "grep MIG_UI_TAG -A1 manifests/cam-operator/v1.1.0/mig-operator.v1.1.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
+  - name: "rhcam-1-1/openshift-migration-velero-rhel8"
+    source_name: "rh-osbs/rhcam-openshift-migration-velero"
+    find_sha_cmd: "grep VELERO_TAG -A1 manifests/cam-operator/v1.1.0/mig-operator.v1.1.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
+  - name: "rhcam-1-1/openshift-migration-plugin-rhel8"
+    source_name: "rh-osbs/rhcam-openshift-migration-plugin"
+    find_sha_cmd: "grep VELERO_PLUGIN_TAG -A1 manifests/cam-operator/v1.1.0/mig-operator.v1.1.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
+  - name: "rhcam-1-1/openshift-migration-velero-restic-restore-helper-rhel8"
+    source_name: "rh-osbs/rhcam-openshift-migration-velero-restic-restore-helper"
+    find_sha_cmd: "grep VELERO_RESTIC_RESTORE_HELPER_TAG -A1 manifests/cam-operator/v1.1.0/mig-operator.v1.1.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
+  - name: "rhcam-1-1/openshift-migration-velero-plugin-for-gcp-rhel8"
+    source_name: "rh-osbs/rhcam-openshift-migration-velero-plugin-for-gcp"
+    find_sha_cmd: "grep VELERO_GCP_PLUGIN_TAG -A1 manifests/cam-operator/v1.1.0/mig-operator.v1.1.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
+  - name: "rhcam-1-1/openshift-migration-velero-plugin-for-aws-rhel8"
+    source_name: "rh-osbs/rhcam-openshift-migration-velero-plugin-for-aws"
+    find_sha_cmd: "grep VELERO_AWS_PLUGIN_TAG -A1 manifests/cam-operator/v1.1.0/mig-operator.v1.1.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
+  - name: "rhcam-1-1/openshift-migration-velero-plugin-for-microsoft-azure-rhel8"
+    source_name: "rh-osbs/rhcam-openshift-migration-velero-plugin-for-microsoft-azure"
+    find_sha_cmd: "grep VELERO_AZURE_PLUGIN_TAG -A1 manifests/cam-operator/v1.1.0/mig-operator.v1.1.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
+post_commands:
+- "docker pull registry-proxy.engineering.redhat.com/rh-osbs/rhcam-openshift-migration-operator@sha256:$(grep -h image: manifests/cam-operator/v1.1.0/mig-operator.v1.1.0.clusterserviceversion.yaml | sort -u | awk -F ':' '{ print $NF }')"
+- "docker tag registry-proxy.engineering.redhat.com/rh-osbs/rhcam-openshift-migration-operator@sha256:$(grep -h image: manifests/cam-operator/v1.1.0/mig-operator.v1.1.0.clusterserviceversion.yaml | sort -u | awk -F ':' '{ print $NF }') operator-yaml:latest"
+- "docker cp $(docker create operator-yaml:latest ):/operator.yml ./"
+- "docker cp $(docker create operator-yaml:latest ):/controller-3.yml ./"
+- "sed -i s/registry.redhat.io/$(oc get route -n mirrored-images registry -o go-template={% raw -%}{{.spec.host}}{% endraw -%})/g operator.yml"
+- "sed -i s/rhcam-1-1/mirrored-images/g operator.yml"
+- "sed -i s/:v1.1/@sha256:$(grep -h image: manifests/cam-operator/v1.1.0/mig-operator.v1.1.0.clusterserviceversion.yaml | sort -u | awk -F ':' '{ print $NF }')/g operator.yml"
+- "cp operator.yml {{ playbook_dir }}"
+- "cp controller-3.yml {{ playbook_dir }}"
