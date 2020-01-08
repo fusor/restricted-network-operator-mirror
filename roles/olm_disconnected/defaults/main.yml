@@ -1,1 +1,5 @@
+icsp: true
+olm: true
+registry_passthrough_tls: false
 registry_pv_size: 1Gi
+persistent_registry: true

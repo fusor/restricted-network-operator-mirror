@@ -33,8 +33,13 @@ spec:
   port:
     targetPort: port-5000
   tls:
+{% if registry_passthrough_tls %}
+    termination: passthrough
+{% else %}
     termination: edge
+{% endif %}
     insecureEdgeTerminationPolicy: Redirect
+{% if persistent_registry %}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -47,6 +52,7 @@ spec:
   resources:
     requests:
       storage: {{ registry_pv_size }}
+{% endif %}
 ---
 apiVersion: v1
 kind: Deployment
@@ -69,17 +75,37 @@ spec:
     spec:
       restartPolicy: Always
       containers:
-        - image: docker.io/registry:latest
-          name: registry
-          env:
-          terminationMessagePath: /dev/termination-log
-          ports:
-            - containerPort: 5000
-              protocol: TCP
-          volumeMounts:
-            - name: registry
-              mountPath: /var/lib/registry
-      volumes:
+      - image: docker.io/registry:latest
+{% if registry_passthrough_tls %}
+        env:
+        - name: REGISTRY_HTTP_TLS_CERTIFICATE
+          value: /etc/secrets/registry.crt
+        - name: REGISTRY_HTTP_TLS_KEY
+          value: /etc/secrets/registry.key
+{% endif %}
+        name: registry
+        terminationMessagePath: /dev/termination-log
+        ports:
+        - containerPort: 5000
+          protocol: TCP
+        volumeMounts:
         - name: registry
-          persistentVolumeClaim:
-            claimName: registry
+          mountPath: /var/lib/registry
+{% if registry_passthrough_tls %}
+        - mountPath: /etc/secrets
+          name: registry-certificates
+{% endif %}
+      volumes:
+      - name: registry
+{% if persistent_registry %}
+        persistentVolumeClaim:
+          claimName: registry
+{% else %}
+        emptyDir: {}
+{% endif %}
+{% if registry_passthrough_tls %}
+      - name: registry-certificates
+        secret:
+          defaultMode: 420
+          secretName: registry-certificates
+{% endif %}

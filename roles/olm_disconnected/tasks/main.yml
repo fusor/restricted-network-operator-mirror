@@ -60,6 +60,12 @@
       definition: "{{ lookup('template', 'namespace.yml.j2') }}"
     with_items:
     - "{{ local_registry_ns }}"
+  
+  - name: Create passthrough TLS certs
+    k8s:
+      state: present
+      definition: "{{ lookup('template', 'passthrough_registry_certs.yml.j2') }}"
+    when: registry_passthrough_tls
 
   - name: Create registry
     k8s:
@@ -82,6 +88,7 @@
 
 - name: Disable default catalog
   shell: "oc patch OperatorHub cluster --type json -p '[{\"op\": \"add\", \"path\": \"/spec/disableAllDefaultSources\", \"value\": true}]'"
+  when: olm
 
 - name: Create the deployment namespace
   k8s:
@@ -120,37 +127,31 @@
     chdir: "{{ tmp_dir.path }}"
   with_items: "{{ operators }}"
 
-- include_tasks: fix_csvs.yml
-  loop: "{{ operators }}"
-  loop_control:
-    loop_var: operator
-  vars:
-    tmp_dir_path: "{{ tmp_dir.path }}"
-  when: operator.type == "dev" or operator.type == "stage"
+- when: olm
+  block:
+  - name: Copy custom-registry Dockerfile into place
+    copy:
+      src: Dockerfile
+      dest: "{{ tmp_dir.path }}/Dockerfile"
 
-- name: Copy custom-registry Dockerfile into place
-  copy:
-    src: Dockerfile
-    dest: "{{ tmp_dir.path }}/Dockerfile"
+  - name: Build custom-registry
+    shell: docker build -f Dockerfile -t {{ exposed_registry }}/{{ local_registry_ns }}/custom-registry .
+    args:
+      chdir: "{{ tmp_dir.path }}"
 
-- name: Build custom-registry
-  shell: docker build -f Dockerfile -t {{ exposed_registry }}/{{ local_registry_ns }}/custom-registry .
-  args:
-    chdir: "{{ tmp_dir.path }}"
+  - name: Push custom-registry
+    shell: docker push {{ exposed_registry }}/{{ local_registry_ns }}/custom-registry
+    args:
+      chdir: "{{ tmp_dir.path }}"
+    retries: 6
+    delay: 20
+    register: result
+    until: result is succeeded
 
-- name: Push custom-registry
-  shell: docker push {{ exposed_registry }}/{{ local_registry_ns }}/custom-registry
-  args:
-    chdir: "{{ tmp_dir.path }}"
-  retries: 6
-  delay: 20
-  register: result
-  until: result is succeeded
-
-- name: Create custom registry
-  k8s:
-    state: present
-    definition: "{{ lookup('template', 'catalog.yml.j2') }}"
+  - name: Create custom registry
+    k8s:
+      state: present
+      definition: "{{ lookup('template', 'catalog.yml.j2') }}"
 
 - name: Initialize mirrors
   set_fact:
@@ -167,15 +168,34 @@
   k8s:
     state: present
     definition: "{{ lookup('template', 'image-content-source-policy.yml.j2') }}"
+  when: icsp
 
 # Remove when internal authenticated registry works again
 - name: Add insecure registry
   shell: |
          oc patch images.config.openshift.io/cluster -p='{"spec":{"registrySources":{"insecureRegistries":["{{ exposed_registry }}"]}}}' --type=merge
-  when: workaround is defined
+  when:
+  - workaround is defined
+  - icsp
+
+- name: Run custom post commands
+  shell: "{{ item }}"
+  args:
+    chdir: "{{ tmp_dir.path }}"
+    warn: false
+  with_items: "{{ post_commands }}"
+  when: post_commands is defined
 
 - name: Message
   debug:
     msg:
     - "Note an ImageContentSourcePolicy was just created. This will cause nodes to start rebooting and cause some cluster instability while completing. For best results be patient and wait for this process to finish (it can take more than 30 minutes for a 12 node cluster). Until a check is implemented here you can watch progress with:"
     - "watch 'oc describe node -l node-role.kubernetes.io/worker= | grep -e Name: -e rendered'"
+  when: icsp
+
+- name: Message
+  debug:
+    msg:
+    - The operator.yml in this directory should work with your mirrored images. 
+  when: not olm
+
