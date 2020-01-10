@@ -1,4 +1,4 @@
-local_registry: image-registry.openshift-image-registry.svc:5000
+local_registry: docker-registry.default.svc:5000
 local_registry_ns: mirrored-images
 deployment_namespace: openshift-migration
 icsp: false
@@ -42,7 +42,7 @@ post_commands:
 - "docker tag registry-proxy.engineering.redhat.com/rh-osbs/rhcam-openshift-migration-operator@sha256:$(grep -h image: manifests/cam-operator/v1.1.0/mig-operator.v1.1.0.clusterserviceversion.yaml | sort -u | awk -F ':' '{ print $NF }') operator-yaml:latest"
 - "docker cp $(docker create operator-yaml:latest ):/operator.yml ./"
 - "docker cp $(docker create operator-yaml:latest ):/controller-3.yml ./"
-- "sed -i s/registry.redhat.io/$(oc get route -n mirrored-images registry -o go-template={% raw -%}{{.spec.host}}{% endraw -%})/g operator.yml"
+- "sed -i s/registry.redhat.io/docker-registry.default.svc:5000/g operator.yml"
 - "sed -i s/rhcam-1-1/mirrored-images/g operator.yml"
 - "sed -i s/:v1.1/@sha256:$(grep -h image: manifests/cam-operator/v1.1.0/mig-operator.v1.1.0.clusterserviceversion.yaml | sort -u | awk -F ':' '{ print $NF }')/g operator.yml"
 - "cp operator.yml {{ playbook_dir }}"
