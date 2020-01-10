@@ -3,15 +3,24 @@
     exposed_registry: "{{ local_registry }}"
 
 - when:
-  - fixed is defined
-  - local_registry == "image-registry.openshift-image-registry.svc:5000"
+  - not workaround
+  - local_registry == "image-registry.openshift-image-registry.svc:5000" or local_registry == "docker-registry.default.svc:5000"
   block:
 
   - name: Expose OpenShift internal registry
     shell: oc patch configs.imageregistry.operator.openshift.io/cluster -p='{"spec":{"defaultRoute":true}}' --type=merge
+    when: local_registry == "image-registry.openshift-image-registry.svc:5000"
+
+  - set_fact:
+      registry_route_command: "oc get images.config.openshift.io -o yaml | egrep -o 'default-route.*$' | sort -u"
+    when: local_registry == "image-registry.openshift-image-registry.svc:5000"
+
+  - set_fact:
+      registry_route_command: "oc get -n default route -o yaml | egrep -o 'docker-registry-default.*$' | sort -u"
+    when: local_registry == "docker-registry.default.svc:5000"
 
   - name: Wait for registry route to be available
-    shell: oc get images.config.openshift.io -o yaml | egrep -o 'default-route.*$' | sort -u
+    shell: "{{ registry_route_command }}"
     register: registry_route
     retries: 20
     delay: 3
@@ -21,13 +30,20 @@
     set_fact:
       exposed_registry: "{{ registry_route.stdout }}"
 
+  - name: Create namespaces for internal registry
+    k8s:
+      state: present
+      definition: "{{ lookup('template', 'namespace.yml.j2') }}"
+    with_items:
+    - "{{ local_registry_ns }}"
+
   - name: Create registry service account
     k8s:
       state: present
-      definition: "{{ lookup('file', 'registry.sa.yml') }}"
+      definition: "{{ lookup('template', 'registry.sa.yml') }}"
 
   - name: Get registry service account token
-    shell: oc sa -n openshift-marketplace get-token registry
+    shell: oc sa -n {{ local_registry_ns }} get-token registry
     register: registry_sa_token
 
   - block:
@@ -40,18 +56,13 @@
     - name: Docker login to internal OpenShift registry
       shell: docker login {{ registry_route.stdout }}  -u registry -p {{ registry_sa_token.stdout }}
 
-  - name: Create namespaces for internal registry
-    k8s:
-      state: present
-      definition: "{{ lookup('template', 'namespace.yml.j2') }}"
-    with_items:
-    - "{{ local_registry_ns }}"
-
   - name: Add local_registry_ns permissions
     shell: oc policy add-role-to-group system:image-puller system:serviceaccounts:{{ deployment_namespace }} --namespace={{ local_registry_ns }}
 
 #This is a workaround to using the internal registry as a mirror until we can work with an authenticated mirror
-- when: local_registry == "image-registry.openshift-image-registry.svc:5000"
+- when:
+  - workaround
+  - local_registry == "image-registry.openshift-image-registry.svc:5000" or local_registry == "docker-registry.default.svc:5000"
   block:
 
   - name: Create namespaces for internal registry
@@ -60,7 +71,7 @@
       definition: "{{ lookup('template', 'namespace.yml.j2') }}"
     with_items:
     - "{{ local_registry_ns }}"
-  
+
   - name: Create passthrough TLS certs
     k8s:
       state: present
@@ -74,17 +85,16 @@
 
   - name: Get route name
     shell: oc get route -n "{{ local_registry_ns }}" registry -o go-template={% raw -%}{{.spec.host}}{% endraw -%}
-    register: route
+    register: registry_route
 
   - name: Update local registry
     set_fact:
-      workaround: true
-      local_registry: "{{ route.stdout }}"
-      exposed_registry: "{{ route.stdout }}"
+      local_registry: "{{ registry_route.stdout }}"
+      exposed_registry: "{{ registry_route.stdout }}"
 
 - pause:
-    prompt: Add {{ route.stdout }} to your insecure regisries before proceeding
-  delegate_to: localhost
+    prompt: Add {{ registry_route.stdout }} to your insecure registries before proceeding
+  when: workaround
 
 - name: Disable default catalog
   shell: "oc patch OperatorHub cluster --type json -p '[{\"op\": \"add\", \"path\": \"/spec/disableAllDefaultSources\", \"value\": true}]'"
@@ -126,6 +136,14 @@
   args:
     chdir: "{{ tmp_dir.path }}"
   with_items: "{{ operators }}"
+
+- include_tasks: fix_csvs.yml
+  loop: "{{ operators }}"
+  loop_control:
+    loop_var: operator
+  vars:
+    tmp_dir_path: "{{ tmp_dir.path }}"
+  when: operator.type == "dev" or operator.type == "stage"
 
 - when: olm
   block:
@@ -196,6 +214,6 @@
 - name: Message
   debug:
     msg:
-    - The operator.yml in this directory should work with your mirrored images. 
+    - The operator.yml in this directory should work with your mirrored images.
   when: not olm
 
