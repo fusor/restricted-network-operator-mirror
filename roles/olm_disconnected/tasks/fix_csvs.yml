@@ -1,0 +1,22 @@
+- name: Get NS
+  set_fact:
+    remote_registry: "{{ remote_app_ns | selectattr('name', 'equalto', operator.type) | map(attribute='remote_registry') | list | first }}"
+
+- name: Find CSVs
+  find:
+    paths: "{{ tmp_dir.path }}/manifests/{{ operator.name }}"
+    patterns: '*clusterserviceversion*'
+    recurse: true
+  register: csvs
+
+- name: Update prod sources
+  shell: sed -i 's/registry.redhat.io/{{ remote_registry }}/g' "{{ item.path }}"
+  args:
+    warn: false
+  with_items: "{{ csvs.files }}"
+
+- name: Update stage sources
+  shell: sed -i 's/registry.stage.redhat.io/{{ remote_registry }}/g' "{{ item.path }}"
+  args:
+    warn: false
+  with_items: "{{ csvs.files }}"
