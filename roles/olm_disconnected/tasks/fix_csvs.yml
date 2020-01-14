@@ -20,3 +20,11 @@
   args:
     warn: false
   with_items: "{{ csvs.files }}"
+
+- include_tasks: custom_image.yml
+  with_items: "{{ csvs.files }}"
+  loop_control:
+    loop_var: csv_file
+  vars:
+  - operator_images: "{{ operator.images }}"
+  - operator_name: "{{ operator.name }}"
