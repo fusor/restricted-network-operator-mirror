@@ -19,3 +19,4 @@
   vars:
     new_item:
     - {'name': '{{ image.name }}', 'sha': '{{ sha.stdout }}', 'source_name': '{{ source_name }}'}
+  when: image.mirror is not defined or image.mirror == True
