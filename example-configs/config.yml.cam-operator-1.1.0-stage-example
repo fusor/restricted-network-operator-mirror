@@ -1,0 +1,45 @@
+registry_pv_size: 2Gi
+local_registry: image-registry.openshift-image-registry.svc:5000
+local_registry_ns: mirrored-images
+deployment_namespace: openshift-migration
+workaround: true
+operators:
+- name: "cam-operator"
+  type: "stage"
+  use_shas: true
+  images:
+  - name: "rhcam-1-1/openshift-migration-rhel7-operator"
+    find_sha_cmd: "grep -h image: manifests/cam-operator/v1.1.0/mig-operator.v1.1.0.clusterserviceversion.yaml | sort -u | awk -F ':' '{ print $NF }'"
+  - name: "rhcam-1-1/openshift-migration-controller-rhel8"
+    find_sha_cmd: "grep MIG_CONTROLLER_TAG -A1 manifests/cam-operator/v1.1.0/mig-operator.v1.1.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
+  - name: "rhcam-1-1/openshift-migration-ui-rhel8"
+    find_sha_cmd: "grep MIG_UI_TAG -A1 manifests/cam-operator/v1.1.0/mig-operator.v1.1.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
+  - name: "rhcam-1-1/openshift-migration-velero-rhel8"
+    find_sha_cmd: "grep VELERO_TAG -A1 manifests/cam-operator/v1.1.0/mig-operator.v1.1.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
+  - name: "rhcam-1-1/openshift-migration-plugin-rhel8"
+    find_sha_cmd: "grep VELERO_PLUGIN_TAG -A1 manifests/cam-operator/v1.1.0/mig-operator.v1.1.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
+  - name: "rhcam-1-1/openshift-migration-velero-restic-restore-helper-rhel8"
+    find_sha_cmd: "grep VELERO_RESTIC_RESTORE_HELPER_TAG -A1 manifests/cam-operator/v1.1.0/mig-operator.v1.1.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
+  - name: "rhcam-1-1/openshift-migration-velero-plugin-for-gcp-rhel8"
+    find_sha_cmd: "grep VELERO_GCP_PLUGIN_TAG -A1 manifests/cam-operator/v1.1.0/mig-operator.v1.1.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
+  - name: "rhcam-1-1/openshift-migration-velero-plugin-for-aws-rhel8"
+    find_sha_cmd: "grep VELERO_AWS_PLUGIN_TAG -A1 manifests/cam-operator/v1.1.0/mig-operator.v1.1.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
+  - name: "rhcam-1-1/openshift-migration-velero-plugin-for-microsoft-azure-rhel8"
+    find_sha_cmd: "grep VELERO_AZURE_PLUGIN_TAG -A1 manifests/cam-operator/v1.1.0/mig-operator.v1.1.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
+
+- name: "ocs-operator"
+  type: "dev"
+  use_shas: true
+  images:
+  - name: "ocs4/rook-ceph-rhel8-operator"
+    source_name: "rh-osbs/rook-ceph"
+    find_sha_cmd: "grep rook-ceph-rhel8-operator manifests/ocs-operator/4.2.0/ocs-operator.v4.2.0.clusterserviceversion.yaml | awk -F ':' '{ print $NF }'"
+  - name: "ocs4/mcg-core-rhel8"
+    source_name: "rh-osbs/mcg-core"
+    find_sha_cmd: "grep NOOBAA_CORE_IMAGE -A1 manifests/ocs-operator/4.2.0/ocs-operator.v4.2.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
+  - name: "ocs4/mcg-rhel8-operator"
+    source_name: "rh-osbs/mcg-operator"
+    find_sha_cmd: "grep mcg-rhel8-operator manifests/ocs-operator/4.2.0/ocs-operator.v4.2.0.clusterserviceversion.yaml | awk -F ':' '{ print $NF }'"
+  - name: "ocs4/ocs-rhel8-operator"
+    source_name: "rh-osbs/ocs-operator"
+    find_sha_cmd: "grep ocs-rhel8-operator manifests/ocs-operator/4.2.0/ocs-operator.v4.2.0.clusterserviceversion.yaml | awk -F ':' '{ print $NF }'"
