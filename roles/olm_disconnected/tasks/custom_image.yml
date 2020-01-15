@@ -1,0 +1,6 @@
+- name: Use custom image
+  shell: "sed -i 's,{{ remote_registry }}/{{ item.name }}.*$,{{ item.custom_image }},g' {{ csv_file.path }}"
+  args:
+    warn: false
+  with_items: "{{ operator_images }}"
+  when: item.custom_image is defined
