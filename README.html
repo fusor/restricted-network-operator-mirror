@@ -39,7 +39,11 @@ echo $(curl -sH &quot;Content-Type: application/json&quot; -XPOST https://quay.i
 
 <h3>Retrieve list of Operators</h3>
 
-<ul><li><p>You can use the `ansible-playbook list-operators.yml playbook to get a list of operators available.</p></li><li><p>You can use <code>ansible-playbook get-operator-csv.yml</code> playbook to retrieve the CSV for the operators defined in <code>config.yml</code>. This is useful for determining what images are required by the operator and whether or not the operator uses SHAs so you can provide an <code>images</code> or <code>resolved_images</code> list. Right now providing this list is the most tedious step since there is no standard way to define images in the CSV. This process should improve in 4.3.</p></li></ul>
+<ul><li>You can use the <code>ansible-playbook list-operators.yml</code> playbook to get a list of operators available.</li></ul>
+
+<h3>Get a specific operators CSV files</h3>
+
+<ul><li>You can use <code>ansible-playbook get-operator-csv.yml</code> playbook to retrieve the CSV for the operators defined in <code>config.yml</code>. This is useful for determining what images are required by the operator and whether or not the operator uses SHAs so you can provide an <code>images</code> or <code>resolved_images</code> list. Right now providing this list is the most tedious step since there is no standard way to define images in the CSV. This process should improve in 4.3.</li></ul>
 
 <h2>TODO</h2>
 

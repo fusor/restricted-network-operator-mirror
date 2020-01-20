@@ -29,8 +29,8 @@ operators:
   - name: "rhcam-1-1/openshift-migration-velero-plugin-for-microsoft-azure-rhel8"
     find_sha_cmd: "grep VELERO_AZURE_PLUGIN_TAG -A1 manifests/cam-operator/v1.1.0/mig-operator.v1.1.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
 post_commands:
-- "docker pull registry-proxy.engineering.redhat.com/rh-osbs/rhcam-openshift-migration-operator@sha256:$(grep -h image: manifests/cam-operator/v1.1.0/mig-operator.v1.1.0.clusterserviceversion.yaml | sort -u | awk -F ':' '{ print $NF }')"
-- "docker tag registry-proxy.engineering.redhat.com/rh-osbs/rhcam-openshift-migration-operator@sha256:$(grep -h image: manifests/cam-operator/v1.1.0/mig-operator.v1.1.0.clusterserviceversion.yaml | sort -u | awk -F ':' '{ print $NF }') operator-yaml:latest"
+- "docker pull registry-proxy.engineering.redhat.com/rh-osbs/rhcam-openshift-migration-operator@sha256:$(grep -h image: manifests/cam-operator/v1.1.0/mig-operator.v1.1.0.clusterserviceversion.yaml | grep operator | sort -u | awk -F ':' '{ print $NF }')"
+- "docker tag registry-proxy.engineering.redhat.com/rh-osbs/rhcam-openshift-migration-operator@sha256:$(grep -h image: manifests/cam-operator/v1.1.0/mig-operator.v1.1.0.clusterserviceversion.yaml | grep operator | sort -u | awk -F ':' '{ print $NF }') operator-yaml:latest"
 - "docker cp $(docker create operator-yaml:latest ):/operator.yml ./"
 - "docker cp $(docker create operator-yaml:latest ):/controller-3.yml ./"
 - "sed -i s/registry.redhat.io/docker-registry.default.svc:5000/g operator.yml"
