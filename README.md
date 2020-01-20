@@ -48,8 +48,9 @@ This playbook has only been tested on Fedora. It may or may not work on other Li
 * Alternatively provide a list of resolved_images. See `config.yml.cam-operator-1.0.0-example` as an example
 
 ### Retrieve list of Operators
-* You can use the `ansible-playbook list-operators.yml playbook to get a list of operators available.
+* You can use the `ansible-playbook list-operators.yml` playbook to get a list of operators available.
 
+### Get a specific operators CSV files
 * You can use `ansible-playbook get-operator-csv.yml` playbook to retrieve the CSV for the operators defined in `config.yml`. This is useful for determining what images are required by the operator and whether or not the operator uses SHAs so you can provide an `images` or `resolved_images` list. Right now providing this list is the most tedious step since there is no standard way to define images in the CSV. This process should improve in 4.3.
 
 ## TODO
