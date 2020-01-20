@@ -34,7 +34,7 @@ Mirror Operator"
 * `ansible-playbook mirror.yml`
 * The playbook will pause and prompt you to add the registry to your insecure registries list.
   * For docker 1.13 this is done in /etc/sysconfig/docker
-  * For docker moby-engine/docker-ce this is done in /etc/docker/daemon.js
+  * For moby-engine/docker-ce this is done in /etc/docker/daemon.js
   * if you've linked docker to podman this is done in /etc/containers/registries.conf
   * One of the TODO's involves attempting to deal with all these versions and file formats... PR welcome.
 
