@@ -8,7 +8,7 @@ The ansible tasks in this repo are intended to help with the task of mirroring i
 This playbook has only been tested on Fedora. It may or may not work on other Linux distributions. CentOS 7 is known not to work because the python-jinja2 package is too old. It may be possible to circumvent this by installing a newer version using pip, but this is generally inadvisable because it can cause problems wtih dnf/yum updates.
 
 * Install python3-openshift, jq, bsdtar, ansible, and moby-engine or docker-ce. For Fedora:
-  * `dnf -y install python3-openshift jq bsdtar ansible moby-engine`
+  * `sudo dnf -y install python3-openshift jq bsdtar ansible moby-engine`
   * `sudo grubby --update-kernel=ALL --args="systemd.unified_cgroup_hierarchy=0"` and reboot.
   * `sudo systemctl enable docker && sudo systemctl start docker`
 
