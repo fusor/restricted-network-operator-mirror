@@ -4,6 +4,27 @@
 
 The ansible tasks in this repo are intended to help with the task of mirroring images to a disconnected or restricted network OpenShift install.
 
+## Prequisites
+* Install python3-openshift, jq, bsdtar, ansible, and moby-engine or docker-ce
+  * Fedora: `dnf -y install python3-openshift jq bsdtar ansible moby-engine`
+  * Fedora: `sudo grubby --update-kernel=ALL --args="systemd.unified_cgroup_hierarchy=0"` and reboot. This is required by docker at present.
+  * `sudo systemctl enable docker && sudo systemctl start docker`
+  * CentOS 7: Jinja2 on CentOS 7 is too old to use this playbook. You may be able to get it working by installing a newer version with pip, but this is generally inadvisable on a production system as it can cause problems when updating packages with yum/dnf.
+
+* Configure docker and ensure it is accessible without root
+  `sudo groupadd docker`
+  `sudo usermod -aG docker $USER`
+  `sudo systemctl restart docker`
+  `newgrp docker #or logout and login`
+
+* Login to registry.redhat.io
+  * These are the same credentials you log into https://access.redhat.com
+  * `docker login -u $username` and enter your password when prompted.
+
+* Ensure you are logged into your cluster
+  * With Openshift 4 a kubeconfig file is created. You can export this in your `.bashrc` or elsewhere
+  * For example: `export KUBECONFIG=/home/$USER/.agnosticd/ocp4/ocp4-workshop_ocp4_kubeconfig`
+
 ## Instructions
 * You can use the `ansible-playbook list-operators.yml playbook to get a list of operators available.
 
