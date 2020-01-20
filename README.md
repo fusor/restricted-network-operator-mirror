@@ -29,7 +29,7 @@ This playbook has only been tested on Fedora. It may or may not work on other Li
   * For example: `export KUBECONFIG=/home/$USER/.agnosticd/ocp4/ocp4-workshop_ocp4_kubeconfig`
 
 ## Instructions
-Mirror Operator"
+### Mirror Operator
 * Create or copy an example config.yml into place if you haven't already.
 * `ansible-playbook mirror.yml`
 * The playbook will pause and prompt you to add the registry to your insecure registries list.
@@ -47,7 +47,7 @@ Mirror Operator"
 * Update `images` with the image names and a command for finding the image tags/SHAs. See `config.yml.cam-operator-1.0.1-example` as an example
 * Alternatively provide a list of resolved_images. See `config.yml.cam-operator-1.0.0-example` as an example
 
-### 
+### Retrieve list of Operators
 * You can use the `ansible-playbook list-operators.yml playbook to get a list of operators available.
 
 * You can use `ansible-playbook get-operator-csv.yml` playbook to retrieve the CSV for the operators defined in `config.yml`. This is useful for determining what images are required by the operator and whether or not the operator uses SHAs so you can provide an `images` or `resolved_images` list. Right now providing this list is the most tedious step since there is no standard way to define images in the CSV. This process should improve in 4.3.
