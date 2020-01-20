@@ -1,0 +1,46 @@
+<h1>Restricted Network OLM Mirror Helper</h1>
+
+<h2>Introduction</h2>
+
+<p>The ansible tasks in this repo are intended to help with the task of mirroring images to a disconnected or restricted network OpenShift install.</p>
+
+<h2>Prequisites</h2>
+
+<p>This playbook has only been tested on Fedora. It may or may not work on other Linux distributions. CentOS 7 is known not to work because the python-jinja2 package is too old. It may be possible to circumvent this by installing a newer version using pip, but this is generally inadvisable because it can cause problems wtih dnf/yum updates.</p>
+
+<ul><li><p>Install python3-openshift, jq, bsdtar, ansible, and moby-engine or docker-ce. For Fedora:</p><ul><li><code>sudo dnf -y install python3-openshift jq bsdtar ansible moby-engine</code></li><li><code>sudo grubby --update-kernel=ALL --args=&quot;systemd.unified_cgroup_hierarchy=0&quot;</code> and reboot.</li><li><p><code>sudo systemctl enable docker &amp;&amp; sudo systemctl start docker</code></p></li></ul></li><li><p>Configure docker and ensure it is accessible without root
+<code>
+sudo groupadd docker
+sudo usermod -aG docker $USER
+sudo systemctl restart docker
+newgrp docker #or logout and login
+</code></p></li><li><p>Login to registry.redhat.io</p><ul><li>These are the same credentials you log into https://access.redhat.com</li><li><p><code>docker login -u $username</code> and enter your password when prompted.</p></li></ul></li><li><p>Ensure you are logged into your cluster</p><ul><li>With Openshift 4 a kubeconfig file is created. You can export this in your <code>.bashrc</code> or elsewhere</li><li><p>For example: <code>export KUBECONFIG=/home/$USER/.agnosticd/ocp4/ocp4-workshop_ocp4_kubeconfig</code></p></li></ul></li><li><p>Get Private Quay namespace logins</p><ul><li><p>Fill out https://docs.google.com/spreadsheets/d/1OyUtbu9aiAi3rfkappz5gcq5FjUbMQtJG4jZCNqVT20/edit#gid=0</p><ul><li>If you need to generate a new GPG key run <code>gpg --full-gen-key</code></li><li>Upload the public key at https://keys.fedoraproject.org/ with the <code>Submit Key</code> button link.</li><li><p>To get the key id/fingerprint easily you can lookup your key after uploading it at https://keys.fedoraproject.org/</p></li></ul></li></ul></li><li><p>Use the private quay namespace logins to obtain a basic auth token for API access</p><ul><li>Once you received the quay robot username and token you need to use these to generate a basic auth token.</li><li>Ensure you export the username and password for the environment you intend to use, stage with stage, etc.</li><li>Run the following
+<code>
+export AUTH_USER
+export AUTH_TOKEN
+echo $(curl -sH &quot;Content-Type: application/json&quot; -XPOST https://quay.io/cnr/api/v1/users/login -d &#39;
+{
+&quot;user&quot;: {
+&quot;username&quot;: &quot;&#39;&quot;${AUTH_USER}&quot;&#39;&quot;,
+&quot;password&quot;: &quot;&#39;&quot;${AUTH_TOKEN}&quot;&#39;&quot;
+}
+}&#39;)
+</code></li><li>export the resulting token in your .bashrc or elsewhere:</li><li><p>For example: export QUAY_TOKEN=&quot;basic ....&quot;</p></li></ul></li><li><p>Login to registry.stage.redhat.io</p><ul><li><code>docker login -u redhat -p redhat</code></li></ul></li></ul>
+
+<h2>Instructions</h2>
+
+<h3>Mirror Operator</h3>
+
+<ul><li>Create or copy an example config.yml into place if you haven&#39;t already.</li><li><code>ansible-playbook mirror.yml</code></li><li>The playbook will pause and prompt you to add the registry to your insecure registries list.<ul><li>For docker 1.13 this is done in /etc/sysconfig/docker</li><li>For moby-engine/docker-ce this is done in /etc/docker/daemon.js</li><li>if you&#39;ve linked docker to podman this is done in /etc/containers/registries.conf</li><li>One of the TODO&#39;s involves attempting to deal with all these versions and file formats... PR welcome.</li></ul></li></ul>
+
+<h3>Config Options</h3>
+
+<ul><li>Update <code>local_registry</code> with the local/internal registry you wish to use for mirroring images</li><li>Update <code>local_registry_ns</code> with the organization/project/namespace you wish to push the images to on your registry host. If you leave the defaults either the internal registry will be used (OCP3 default) or an insecure registry will be configured (OCP4). The insecure registry is intended to be a temporary workaround.</li><li>Update the <code>operators</code> list with the operators you wish to mirror</li><li>Update <code>use_shas</code> to match whichever the operator uses. Going forward SHAs will be the standard.</li><li>Update <code>deployment_namespace</code> with the namespace you want to deploy the operator to</li><li>Update <code>images</code> with the image names and a command for finding the image tags/SHAs. See <code>config.yml.cam-operator-1.0.1-example</code> as an example</li><li>Alternatively provide a list of resolved_images. See <code>config.yml.cam-operator-1.0.0-example</code> as an example</li></ul>
+
+<h3>Retrieve list of Operators</h3>
+
+<ul><li><p>You can use the `ansible-playbook list-operators.yml playbook to get a list of operators available.</p></li><li><p>You can use <code>ansible-playbook get-operator-csv.yml</code> playbook to retrieve the CSV for the operators defined in <code>config.yml</code>. This is useful for determining what images are required by the operator and whether or not the operator uses SHAs so you can provide an <code>images</code> or <code>resolved_images</code> list. Right now providing this list is the most tedious step since there is no standard way to define images in the CSV. This process should improve in 4.3.</p></li></ul>
+
+<h2>TODO</h2>
+
+<ul><li>There are quite a few shell commands that can probably be updated to use other ansible modules in order to work more smoothly</li><li>relatedImages is a new feature of CSV&#39;s. We can use this to get the list of images to mirror now instead of putting this work on the user</li><li>Deal with internal registry and global pull secret. See if we can get this to work for mirrors</li><li>Add some block/rescue with debug messages at typical failure points to hint at what the problem is.</li><li>Get docker version an attempt to configure insecure registry automatically</li></ul>
