@@ -11,8 +11,12 @@
 - set_fact:
     combined_name: "{{ ns }}/{{ operator.name }}"
 
-- set_fact:
-    default: "{{ packages.json | selectattr('name', 'equalto', combined_name) | map(attribute='default') | list | first }}"
+- block:
+  - set_fact:
+      default: "{{ packages.json | selectattr('name', 'equalto', combined_name) | map(attribute='default') | list | first }}"
+  rescue:
+  - fail:
+      msg: "When this task fails it is usually an indication you are not authenticated or cannot communicate with quay.io. If necessary export the QUAY_TOKEN environment variable with your basic auth token. See the README for more information."
 
 - name: Get operator details
   uri:

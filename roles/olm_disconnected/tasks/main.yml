@@ -30,12 +30,16 @@
     set_fact:
       exposed_registry: "{{ registry_route.stdout }}"
 
-  - name: Create namespaces for internal registry
-    k8s:
-      state: present
-      definition: "{{ lookup('template', 'namespace.yml.j2') }}"
-    with_items:
-    - "{{ local_registry_ns }}"
+  - block:
+    - name: Create namespaces for internal registry
+      k8s:
+        state: present
+        definition: "{{ lookup('template', 'namespace.yml.j2') }}"
+      with_items:
+      - "{{ local_registry_ns }}"
+    rescue:
+    - fail:
+        msg: "When this task fails it is usually an indication you are not authenticated or cannot communicate with your Openshift cluster. If necessary export the KUBECONFIG environment variable with the path to your kubeconfig. See the README for more information."
 
   - name: Create registry service account
     k8s:

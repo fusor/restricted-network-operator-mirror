@@ -27,30 +27,34 @@
     - {'name': '{{ item.name }}', 'remote_registry': '{{ remote_registry }}'}
   with_items: "{{ resolved_images }}"
 
-- name: Mirror SHA images
-  shell: |
-         oc image mirror --insecure=true {{ source_registry }}/{{ item.source_name | default(item.name) }}@sha256:{{ item.sha }} \
+- block:
+  - name: Mirror SHA images
+    shell: |
+           oc image mirror --insecure=true {{ source_registry }}/{{ item.source_name | default(item.name) }}@sha256:{{ item.sha }} \
                                          {{ exposed_registry }}/{{ local_registry_ns }}/{{ item.name.split("/")[-1] }}:latest
-  args:
-  with_items: "{{ resolved_images }}"
-  when: operator.use_shas
-  vars:
-    source_registry: "{{ remote_app_ns | selectattr('name', 'equalto', operator.type) | map(attribute='source_registry') | list | first }}"
-  retries: 5
-  delay: 10
-  register: result
-  until: result.rc == 0
+    args:
+    with_items: "{{ resolved_images }}"
+    when: operator.use_shas
+    vars:
+      source_registry: "{{ remote_app_ns | selectattr('name', 'equalto', operator.type) | map(attribute='source_registry') | list | first }}"
+    retries: 5
+    delay: 10
+    register: result
+    until: result.rc == 0
 
-- name: Mirror tagged images
-  shell: |
+  - name: Mirror tagged images
+    shell: |
          oc image mirror --insecure=true {{ source_registry }}/{{ item.source_name | default(item.name) }}:{{ item.sha }} \
                                          {{ exposed_registry }}/{{ local_registry_ns }}/{{ item.name.split("/")[-1] }}:{{ item.sha }}
-  args:
-  with_items: "{{ resolved_images }}"
-  when: not operator.use_shas
-  vars:
-    source_registry: "{{ remote_app_ns | selectattr('name', 'equalto', operator.type) | map(attribute='source_registry') | list | first }}"
-  retries: 5
-  delay: 10
-  register: result
-  until: result.rc == 0
+    args:
+    with_items: "{{ resolved_images }}"
+    when: not operator.use_shas
+    vars:
+      source_registry: "{{ remote_app_ns | selectattr('name', 'equalto', operator.type) | map(attribute='source_registry') | list | first }}"
+    retries: 5
+    delay: 10
+    register: result
+    until: result.rc == 0
+  rescue:
+  - fail:
+      msg: "When this task fails it is usually an indication you are not authenticated to the source registry (for example registry.redhat.io) . If necessary docker login to the regisry and verify you can resolve and reach the mirror registry."
