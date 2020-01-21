@@ -13,12 +13,12 @@ This playbook has only been tested on Fedora. It may or may not work on other Li
   * `sudo systemctl enable docker && sudo systemctl start docker`
 
 * Configure docker and ensure it is accessible without root
-  ```
-  sudo groupadd docker
-  sudo usermod -aG docker $USER
-  sudo systemctl restart docker
-  newgrp docker #or logout and login
-  ```
+  
+  `sudo groupadd docker`  
+  `sudo usermod -aG docker $USER`  
+  `sudo systemctl restart docker`  
+  `newgrp docker #or logout and login`  
+ 
 
 * Login to registry.redhat.io
   * These are the same credentials you log into https://access.redhat.com
