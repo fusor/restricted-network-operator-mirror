@@ -38,17 +38,17 @@ This playbook has only been tested on Fedora. It may or may not work on other Li
   * Once you received the quay robot username and token you need to use these to generate a basic auth token.
   * Ensure you export the username and password for the environment you intend to use, stage with stage, etc.
   * Run the following
-  ```
-  export AUTH_USER
-  export AUTH_TOKEN
-  echo $(curl -sH "Content-Type: application/json" -XPOST https://quay.io/cnr/api/v1/users/login -d '
-  {
-    "user": {
-        "username": "'"${AUTH_USER}"'",
-        "password": "'"${AUTH_TOKEN}"'"
-    }
-  }')
-  ```
+
+  `export AUTH_USER`  
+  `export AUTH_TOKEN`  
+  `echo $(curl -sH "Content-Type: application/json" -XPOST https://quay.io/cnr/api/v1/users/login -d '`  
+  `{`  
+  `  "user": {`  
+  `      "username": "'"${AUTH_USER}"'",`  
+  `      "password": "'"${AUTH_TOKEN}"'"`  
+  `  }`  
+  `}')`  
+  
   * export the resulting token in your .bashrc or elsewhere:
   * For example: export QUAY_TOKEN="basic ...."
 
