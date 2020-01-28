@@ -22,7 +22,7 @@ This playbook has only been tested on Fedora. It may or may not work on other Li
 
 * Login to registry.redhat.io
   * These are the same credentials you log into https://access.redhat.com
-  * `docker login -u $username` and enter your password when prompted.
+  * `docker login -u $username https://registry.redhat.io` and enter your password when prompted.
 
 * Ensure you are logged into your cluster
   * With Openshift 4 a kubeconfig file is created. You can export this in your `.bashrc` or elsewhere
