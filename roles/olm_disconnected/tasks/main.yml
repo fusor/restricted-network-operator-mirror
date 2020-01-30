@@ -52,13 +52,21 @@
 
   - block:
     - name: Docker login to internal OpenShift registry
-      shell: docker login {{ registry_route.stdout }}  -u registry -p {{ registry_sa_token.stdout }}
+#      shell: docker login {{ registry_route.stdout }}  -u registry -p {{ registry_sa_token.stdout }}
+      docker_login:
+        username: registry
+        password: "{{ registry_sa_token.stdout }}"
+        registry: "{{ registry_route.stdout }}"
     rescue:
     - pause:
         prompt: Add {{ registry_route.stdout }} to your insecure regisries, restart docker, then press return to try again
 
     - name: Docker login to internal OpenShift registry
-      shell: docker login {{ registry_route.stdout }}  -u registry -p {{ registry_sa_token.stdout }}
+#      shell: docker login {{ registry_route.stdout }}  -u registry -p {{ registry_sa_token.stdout }}
+      docker_login:
+        username: registry
+        password: "{{ registry_sa_token.stdout }}"
+        registry: "{{ registry_route.stdout }}"
 
   - name: Add local_registry_ns permissions
     shell: oc policy add-role-to-group system:image-puller system:serviceaccounts:{{ deployment_namespace }} --namespace={{ local_registry_ns }}
