@@ -26,3 +26,5 @@ operators:
     find_sha_cmd: "grep VELERO_AWS_PLUGIN_TAG -A1 manifests/cam-operator/v1.1.0/mig-operator.v1.1.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
   - name: "rhcam-1-1/openshift-migration-velero-plugin-for-microsoft-azure-rhel8"
     find_sha_cmd: "grep VELERO_AZURE_PLUGIN_TAG -A1 manifests/cam-operator/v1.1.0/mig-operator.v1.1.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
+  - name: "rhcam-1-1/openshift-migration-registry-rhel8"
+    find_sha_cmd: "grep MIGRATION_REGISTRY_TAG -A1 manifests/cam-operator/v1.1.0/mig-operator.v1.1.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
