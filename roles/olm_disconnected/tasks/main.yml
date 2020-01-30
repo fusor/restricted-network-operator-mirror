@@ -52,7 +52,6 @@
 
   - block:
     - name: Docker login to internal OpenShift registry
-#      shell: docker login {{ registry_route.stdout }}  -u registry -p {{ registry_sa_token.stdout }}
       docker_login:
         username: registry
         password: "{{ registry_sa_token.stdout }}"
@@ -62,7 +61,6 @@
         prompt: Add {{ registry_route.stdout }} to your insecure regisries, restart docker, then press return to try again
 
     - name: Docker login to internal OpenShift registry
-#      shell: docker login {{ registry_route.stdout }}  -u registry -p {{ registry_sa_token.stdout }}
       docker_login:
         username: registry
         password: "{{ registry_sa_token.stdout }}"
