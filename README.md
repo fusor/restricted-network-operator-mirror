@@ -8,7 +8,7 @@ The ansible tasks in this repo are intended to help with the task of mirroring i
 This playbook has only been tested on Fedora. It may or may not work on other Linux distributions. CentOS 7 is known not to work because the python-jinja2 package is too old. It may be possible to circumvent this by installing a newer version using pip, but this is generally inadvisable because it can cause problems wtih dnf/yum updates.
 
 * Install python3-openshift, jq, bsdtar, ansible, and moby-engine or docker-ce. For Fedora:
-  * `sudo dnf -y install python3-openshift jq bsdtar ansible moby-engine`
+  * `sudo dnf -y install python3-openshift python3-docker jq bsdtar ansible moby-engine`
   * `sudo grubby --update-kernel=ALL --args="systemd.unified_cgroup_hierarchy=0"` and reboot.
   * `sudo systemctl enable docker && sudo systemctl start docker`
 
@@ -22,7 +22,7 @@ This playbook has only been tested on Fedora. It may or may not work on other Li
 
 * Login to registry.redhat.io
   * These are the same credentials you log into https://access.redhat.com
-  * `docker login -u $username` and enter your password when prompted.
+  * `docker login -u $username https://registry.redhat.io` and enter your password when prompted.
 
 * Ensure you are logged into your cluster
   * With Openshift 4 a kubeconfig file is created. You can export this in your `.bashrc` or elsewhere
