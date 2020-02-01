@@ -1,0 +1,69 @@
+#PARTIAL: https://github.com/jmontleon/restricted-network-operator-mirror/issues/2
+- name: "Confirm {{ docker_dir }} exists"
+  stat:
+    path: "{{ docker_dir }}"
+  register: docker_dir_check
+
+- when:
+  - docker_dir_check.stat.exists and docker_dir_check.stat.isdir
+
+  block:
+
+  - name: "Look for an existing {{ daemon_json }} file"
+    stat:
+      path: "{{ docker_dir }}/{{ daemon_json }}"
+    register: daemon_json_check
+
+  - name: "Import {{ daemon_json }} content"
+    include_vars:
+      file: "{{ docker_dir }}/{{ daemon_json }}"
+      name: docker_daemon_json
+    when: daemon_json_check.stat.exists and daemon_json_check.stat.isreg
+
+  - name: "Validate insecure-registries list"
+    set_fact:
+      docker_daemon_json: "{{ docker_daemon_json | combine({'insecure-registries':[]}) }}"
+    when: not docker_daemon_json['insecure-registries'] is defined
+
+  - name: "Create string from insecure-registries list"
+    set_fact:
+      insecure_registry_string: "{{ insecure_registry_string }}{{ (index > 0)|ternary(',','') }}{{ item }}"
+    loop: "{{ ( docker_daemon_json | default({'insecure-registries':[]}) ) | json_query('\"insecure-registries\"[]')  }}"
+    loop_control:
+      index_var: index
+
+  - when:
+    - not registry_route.stdout in insecure_registry_string
+
+    block:
+
+    - name: "Add {{ registry_route.stdout }} to insecure-registries list"
+      set_fact:
+        new_insreg_list: "{{ ( docker_daemon_json | default({'insecure-registries':[]}) ) | json_query('\"insecure-registries\"[]') + [ registry_route.stdout ] }}"
+  
+    - name: "Clean insecure-registries list"
+      set_fact:
+        new_insreg_list: "{{ new_insreg_list | unique }}"
+  
+    - name: "Create sanitized insecure-registries list"
+      set_fact:
+        new_insreg: |
+          {
+            "insecure-registries" :  {{ new_insreg_list }}
+          }
+  
+    - name: "Generate updated {{ daemon_json }} contents"
+      set_fact:
+        new_daemon_json: "{{ docker_daemon_json  | combine(new_insreg) }}"
+  
+    - name: "Write {{ daemon_json }} file"
+      copy:
+        content:  "{{ new_daemon_json | to_nice_json }}"
+        dest: "{{ docker_dir }}/{{ daemon_json }}"
+      backup: true
+  
+    - name: "Restart docker service"
+      service:
+        name: docker
+        state: restarted
+  

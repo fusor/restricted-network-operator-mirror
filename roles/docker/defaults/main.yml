@@ -1,0 +1,3 @@
+insecure_registry_string: ""
+docker_dir: "/etc/docker"
+daemon_json: "daemon.json"
