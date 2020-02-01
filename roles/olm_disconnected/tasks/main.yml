@@ -60,6 +60,8 @@
     - name: "Include insecure-registries fix-up role"
       include_role:
         name: docker
+
+  - block:
     - name: Docker login to internal OpenShift registry
       docker_login:
         username: registry
