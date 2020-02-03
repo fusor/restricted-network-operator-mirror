@@ -1,3 +1,4 @@
+internal_registry: docker-registry.default.svc:5000
 local_registry: docker-registry.default.svc:5000
 local_registry_ns: mirrored-images
 deployment_namespace: openshift-migration

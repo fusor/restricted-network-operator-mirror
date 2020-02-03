@@ -1,4 +1,5 @@
 registry_pv_size: 2Gi
+internal_registry: image-registry.openshift-image-registry.svc:5000
 local_registry: image-registry.openshift-image-registry.svc:5000
 local_registry_ns: mirrored-images
 deployment_namespace: openshift-migration
