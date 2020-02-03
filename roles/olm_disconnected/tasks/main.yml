@@ -169,18 +169,18 @@
     shell: oc get secret pull-secret -n openshift-config -o yaml --export | oc create -n openshift-migration -f -
 
   - name: Link secret
-    shell: oc secrets link builder pull-secret
+    shell: oc secrets -n {{ deployment_namespace }}  link builder pull-secret
 
   - name: Create custom-registry buildconfig
-    shell: oc new-build --build-secret pull-secret -D - -n  openshift-migration --name custom-registry < Dockerfile
+    shell: oc new-build --build-secret pull-secret -D - -n {{ deployment_namespace }} --name custom-registry < Dockerfile
     args:
       chdir: "{{ tmp_dir.path }}"
 
   - name: Cancel initial custom-registry build
-    shell: oc cancel-build custom-registry-1
+    shell: oc cancel-build -n {{ deployment_namespace }} custom-registry-1
 
   - name: Start binary build
-    shell: oc start-build custom-registry --from-dir . --follow=true
+    shell: oc start-build -n {{ deployment_namespace }} custom-registry --from-dir . --follow=true
     args:
       chdir: "{{ tmp_dir.path }}"
 
