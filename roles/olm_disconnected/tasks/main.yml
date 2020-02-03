@@ -74,7 +74,6 @@
   - workaround
   - local_registry == "image-registry.openshift-image-registry.svc:5000" or local_registry == "docker-registry.default.svc:5000"
   block:
-
   - name: Create namespaces for internal registry
     k8s:
       state: present
@@ -101,10 +100,6 @@
     set_fact:
       local_registry: "{{ registry_route.stdout }}"
       exposed_registry: "{{ registry_route.stdout }}"
-
-- pause:
-    prompt: Add {{ registry_route.stdout }} to your insecure registries before proceeding
-  when: workaround
 
 - name: Disable default catalog
   shell: "oc patch OperatorHub cluster --type json -p '[{\"op\": \"add\", \"path\": \"/spec/disableAllDefaultSources\", \"value\": true}]'"
@@ -157,24 +152,37 @@
 
 - when: olm
   block:
+  - name: Clean registry items to help ensure we get the latest metadata
+    shell: oc delete -n {{ deployment_namespace }} {{ item }}
+    with_items:
+    - buildconfigs --all
+    - builds --all
+    - catalogsources --all
+    - secret pull-secret
+
   - name: Copy custom-registry Dockerfile into place
     copy:
       src: Dockerfile
       dest: "{{ tmp_dir.path }}/Dockerfile"
 
-  - name: Build custom-registry
-    shell: docker build -f Dockerfile -t {{ exposed_registry }}/{{ local_registry_ns }}/custom-registry .
+  - name: Copy pull-secret
+    shell: oc get secret pull-secret -n openshift-config -o yaml --export | oc create -n openshift-migration -f -
+
+  - name: Link secret
+    shell: oc secrets link builder pull-secret
+
+  - name: Create custom-registry buildconfig
+    shell: oc new-build --build-secret pull-secret -D - -n  openshift-migration --name custom-registry < Dockerfile
     args:
       chdir: "{{ tmp_dir.path }}"
 
-  - name: Push custom-registry
-    shell: docker push {{ exposed_registry }}/{{ local_registry_ns }}/custom-registry
+  - name: Cancel initial custom-registry build
+    shell: oc cancel-build custom-registry-1
+
+  - name: Start binary build
+    shell: oc start-build custom-registry --from-dir . --follow=true
     args:
       chdir: "{{ tmp_dir.path }}"
-    retries: 6
-    delay: 20
-    register: result
-    until: result is succeeded
 
   - name: Create custom registry
     k8s:
