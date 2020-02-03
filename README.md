@@ -9,16 +9,6 @@ This playbook has only been tested on Fedora. It may or may not work on other Li
 
 * Install python3-openshift, jq, bsdtar, ansible, and moby-engine or docker-ce. For Fedora:
   * `sudo dnf -y install python3-openshift python3-docker jq bsdtar ansible moby-engine`
-  * `sudo grubby --update-kernel=ALL --args="systemd.unified_cgroup_hierarchy=0"` and reboot.
-  * `sudo systemctl enable docker && sudo systemctl start docker`
-
-* Configure docker and ensure it is accessible without root
-  
-  `sudo groupadd docker`  
-  `sudo usermod -aG docker $USER`  
-  `sudo systemctl restart docker`  
-  `newgrp docker #or logout and login`  
- 
 
 * Login to registry.redhat.io
   * These are the same credentials you log into https://access.redhat.com
@@ -59,11 +49,6 @@ This playbook has only been tested on Fedora. It may or may not work on other Li
 ### Mirror Operator
 * Create or copy an example config.yml into place if you haven't already.
 * `ansible-playbook mirror.yml`
-* The playbook will pause and prompt you to add the registry to your insecure registries list.
-  * For docker 1.13 this is done in /etc/sysconfig/docker
-  * For moby-engine/docker-ce this is done in /etc/docker/daemon.js
-  * if you've linked docker to podman this is done in /etc/containers/registries.conf
-  * One of the TODO's involves attempting to deal with all these versions and file formats... PR welcome.
 
 ### Config Options
 * Update `local_registry` with the local/internal registry you wish to use for mirroring images
