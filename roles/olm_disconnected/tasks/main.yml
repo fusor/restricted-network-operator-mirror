@@ -158,7 +158,7 @@
     - buildconfigs --all
     - builds --all
     - catalogsources --all
-    - secret pull-secret
+    - secret pull-secret --ignore-not-found=true
 
   - name: Copy custom-registry Dockerfile into place
     copy:
