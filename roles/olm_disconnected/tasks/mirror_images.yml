@@ -37,7 +37,7 @@
     when: operator.use_shas
     vars:
       source_registry: "{{ remote_app_ns | selectattr('name', 'equalto', operator.type) | map(attribute='source_registry') | list | first }}"
-    retries: 5
+    retries: 12
     delay: 10
     register: result
     until: result.rc == 0
@@ -51,7 +51,7 @@
     when: not operator.use_shas
     vars:
       source_registry: "{{ remote_app_ns | selectattr('name', 'equalto', operator.type) | map(attribute='source_registry') | list | first }}"
-    retries: 5
+    retries: 12
     delay: 10
     register: result
     until: result.rc == 0

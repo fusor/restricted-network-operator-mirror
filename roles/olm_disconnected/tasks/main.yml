@@ -3,7 +3,7 @@
     exposed_registry: "{{ local_registry }}"
 
 - when:
-  - not workaround
+  - not workaround|bool
   - local_registry == "image-registry.openshift-image-registry.svc:5000" or local_registry == "docker-registry.default.svc:5000"
   block:
 
@@ -71,7 +71,7 @@
 
 #This is a workaround to using the internal registry as a mirror until we can work with an authenticated mirror
 - when:
-  - workaround
+  - workaround|bool
   - local_registry == "image-registry.openshift-image-registry.svc:5000" or local_registry == "docker-registry.default.svc:5000"
   block:
   - name: Create namespaces for internal registry
@@ -85,7 +85,7 @@
     k8s:
       state: present
       definition: "{{ lookup('template', 'passthrough_registry_certs.yml.j2') }}"
-    when: registry_passthrough_tls
+    when: registry_passthrough_tls|bool
 
   - name: Create registry
     k8s:
@@ -103,7 +103,7 @@
 
 - name: Disable default catalog
   shell: "oc patch OperatorHub cluster --type json -p '[{\"op\": \"add\", \"path\": \"/spec/disableAllDefaultSources\", \"value\": true}]'"
-  when: olm
+  when: olm|bool
 
 - name: Create the deployment namespace
   k8s:
@@ -150,7 +150,7 @@
     tmp_dir_path: "{{ tmp_dir.path }}"
   when: operator.type == "dev" or operator.type == "stage"
 
-- when: olm
+- when: olm|bool
   block:
   - name: Clean registry items to help ensure we get the latest metadata
     shell: oc delete -n {{ deployment_namespace }} {{ item }}
@@ -170,11 +170,19 @@
 
   - name: Link secret
     shell: oc secrets -n {{ deployment_namespace }}  link builder pull-secret
+    register: res
+    until: res is success
+    retries: 6
+    delay: 10
 
   - name: Create custom-registry buildconfig
     shell: oc new-build --build-secret pull-secret -D - -n {{ deployment_namespace }} --name custom-registry < Dockerfile
     args:
       chdir: "{{ tmp_dir.path }}"
+
+  - name: Wait for build to settle
+    pause:
+      seconds: 15
 
   - name: Cancel initial custom-registry build
     shell: oc cancel-build -n {{ deployment_namespace }} custom-registry-1
@@ -204,7 +212,7 @@
   k8s:
     state: present
     definition: "{{ lookup('template', 'image-content-source-policy.yml.j2') }}"
-  when: icsp
+  when: icsp|bool
 
 # Remove when internal authenticated registry works again
 - name: Add insecure registry
@@ -212,7 +220,7 @@
          oc patch images.config.openshift.io/cluster -p='{"spec":{"registrySources":{"insecureRegistries":["{{ exposed_registry }}"]}}}' --type=merge
   when:
   - workaround is defined
-  - icsp
+  - icsp|bool
 
 - name: Run custom post commands
   shell: "{{ item }}"
@@ -227,11 +235,38 @@
     msg:
     - "Note an ImageContentSourcePolicy was just created. This will cause nodes to start rebooting and cause some cluster instability while completing. For best results be patient and wait for this process to finish (it can take more than 30 minutes for a 12 node cluster). Until a check is implemented here you can watch progress with:"
     - "watch 'oc describe node -l node-role.kubernetes.io/worker= | grep -e Name: -e rendered'"
-  when: icsp
+  when: icsp|bool
+
+- name: Verify worker configurations are consistent
+  block:
+    
+    - name: Waiting for machine configuration worker pool to start updating
+      k8s_facts:
+        kind: MachineConfigPool
+        name: worker
+      register: machine_config
+      retries: 30
+      delay: 20
+      until: |
+        machine_config.get('resources', []) | length == 1 and
+        machine_config.resources[0].status.get('conditions', {}) | list | selectattr( "type", "equalto", "Updating") | selectattr( "status", "equalto", "True") | list | length > 0
+
+    - name: Waiting for machine configuration worker pool to finish updating
+      k8s_facts:
+        kind: MachineConfigPool
+        name: worker
+      register: machine_config
+      retries: 120
+      delay: 60
+      until: |
+        machine_config.get('resources', []) | length == 1 and
+        machine_config.resources[0].status.get('conditions', {}) | list | selectattr( "type", "equalto", "Updating") | selectattr( "status", "equalto", "False") | list | length > 0
+    
+  when: validate_node_config|bool
 
 - name: Message
   debug:
     msg:
     - The operator.yml in this directory should work with your mirrored images.
-  when: not olm
+  when: not olm|bool
 
