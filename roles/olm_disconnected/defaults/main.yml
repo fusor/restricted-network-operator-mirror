@@ -4,3 +4,4 @@ persistent_registry: true
 registry_passthrough_tls: false
 registry_pv_size: 1Gi
 workaround: false
+validate_node_config: false
