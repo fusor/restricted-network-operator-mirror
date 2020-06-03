@@ -30,4 +30,4 @@ operators:
   - name: "rhcam-1-2/openshift-migration-registry-rhel8"
     find_sha_cmd: "grep MIGRATION_REGISTRY_TAG -A1 manifests/cam-operator/v1.2.0/konveyor-operator.v1.2.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
   - name: "rhcam-1-2/openshift-migration-hook-runner-rhel7"
-    find_sha_cmd: "grep openshift-migration-hook-runner-rhel7 manifests/cam-operator/v1.2.0/konveyor-operator.v1.2.0.clusterserviceversion.yaml | awk -F \"[ :]\" '{ print $NF }'"
+    find_sha_cmd: "grep HOOK_RUNNER_TAG -A1 manifests/cam-operator/v1.2.0/konveyor-operator.v1.2.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
