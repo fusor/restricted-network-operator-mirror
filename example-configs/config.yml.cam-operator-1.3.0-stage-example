@@ -1,0 +1,33 @@
+registry_pv_size: 2Gi
+internal_registry: image-registry.openshift-image-registry.svc:5000
+local_registry: image-registry.openshift-image-registry.svc:5000
+local_registry_ns: mirrored-images
+deployment_namespace: openshift-migration
+workaround: true
+operators:
+- name: "cam-operator"
+  type: "stage"
+  use_shas: true
+  images:
+  - name: "rhmtc/openshift-migration-rhel7-operator"
+    find_sha_cmd: "grep -h image: manifests/cam-operator/v1.3.0/konveyor-operator.v1.3.0.clusterserviceversion.yaml | grep operator | sort -u | awk -F ':' '{ print $NF }'"
+  - name: "rhmtc/openshift-migration-controller-rhel8"
+    find_sha_cmd: "grep MIG_CONTROLLER_TAG -A1 manifests/cam-operator/v1.3.0/konveyor-operator.v1.3.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
+  - name: "rhmtc/openshift-migration-ui-rhel8"
+    find_sha_cmd: "grep MIG_UI_TAG -A1 manifests/cam-operator/v1.3.0/konveyor-operator.v1.3.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
+  - name: "rhmtc/openshift-migration-velero-rhel8"
+    find_sha_cmd: "grep VELERO_TAG -A1 manifests/cam-operator/v1.3.0/konveyor-operator.v1.3.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
+  - name: "rhmtc/openshift-migration-plugin-rhel8"
+    find_sha_cmd: "grep VELERO_PLUGIN_TAG -A1 manifests/cam-operator/v1.3.0/konveyor-operator.v1.3.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
+  - name: "rhmtc/openshift-migration-velero-restic-restore-helper-rhel8"
+    find_sha_cmd: "grep VELERO_RESTIC_RESTORE_HELPER_TAG -A1 manifests/cam-operator/v1.3.0/konveyor-operator.v1.3.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
+  - name: "rhmtc/openshift-migration-velero-plugin-for-gcp-rhel8"
+    find_sha_cmd: "grep VELERO_GCP_PLUGIN_TAG -A1 manifests/cam-operator/v1.3.0/konveyor-operator.v1.3.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
+  - name: "rhmtc/openshift-migration-velero-plugin-for-aws-rhel8"
+    find_sha_cmd: "grep VELERO_AWS_PLUGIN_TAG -A1 manifests/cam-operator/v1.3.0/konveyor-operator.v1.3.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
+  - name: "rhmtc/openshift-migration-velero-plugin-for-microsoft-azure-rhel8"
+    find_sha_cmd: "grep VELERO_AZURE_PLUGIN_TAG -A1 manifests/cam-operator/v1.3.0/konveyor-operator.v1.3.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
+  - name: "rhmtc/openshift-migration-registry-rhel8"
+    find_sha_cmd: "grep MIGRATION_REGISTRY_TAG -A1 manifests/cam-operator/v1.3.0/konveyor-operator.v1.3.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
+  - name: "rhmtc/openshift-migration-hook-runner-rhel7"
+    find_sha_cmd: "grep HOOK_RUNNER_TAG -A1 manifests/cam-operator/v1.3.0/konveyor-operator.v1.3.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
