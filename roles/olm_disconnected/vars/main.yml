@@ -22,3 +22,7 @@ remote_app_ns:
   ns: rh-osbs-operators
   remote_registry: image-registry.openshift-image-registry.svc:5000
   source_registry: registry-proxy.engineering.redhat.com
+- name: mtc
+  ns: mtcmetadata
+  remote_registry: registry.stage.redhat.io
+  source_registry: registry.stage.redhat.io

@@ -6,7 +6,7 @@ deployment_namespace: openshift-migration
 workaround: true
 operators:
 - name: "mtc-operator"
-  type: "stage"
+  type: "mtc"
   use_shas: true
   images:
   - name: "rhmtc/openshift-migration-rhel7-operator"

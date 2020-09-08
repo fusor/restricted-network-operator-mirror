@@ -1,12 +1,14 @@
-registry_pv_size: 2Gi
-internal_registry: image-registry.openshift-image-registry.svc:5000
-local_registry: image-registry.openshift-image-registry.svc:5000
+internal_registry: docker-registry.default.svc:5000
+local_registry: docker-registry.default.svc:5000
 local_registry_ns: mirrored-images
 deployment_namespace: openshift-migration
-workaround: true
+icsp: false
+olm: false
+persistent_registry: false
+registry_passthrough_tls: true
 operators:
 - name: "mtc-operator"
-  type: "stage"
+  type: "mtc"
   use_shas: true
   images:
   - name: "rhmtc/openshift-migration-rhel7-operator"
@@ -31,3 +33,13 @@ operators:
     find_sha_cmd: "grep MIGRATION_REGISTRY_TAG -A1 manifests/mtc-operator/v1.3.0/konveyor-operator.v1.3.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
   - name: "rhmtc/openshift-migration-hook-runner-rhel7"
     find_sha_cmd: "grep HOOK_RUNNER_TAG -A1 manifests/mtc-operator/v1.3.0/konveyor-operator.v1.3.0.clusterserviceversion.yaml | grep value | awk -F \"[ :]\" '{ print $NF }'"
+post_commands:
+- "docker pull registry-proxy.engineering.redhat.com/rh-osbs/rhmtc-openshift-migration-operator@sha256:$(grep -h image: manifests/mtc-operator/v1.3.0/konveyor-operator.v1.3.0.clusterserviceversion.yaml | grep operator | sort -u | awk -F ':' '{ print $NF }')"
+- "docker tag registry-proxy.engineering.redhat.com/rh-osbs/rhmtc-openshift-migration-operator@sha256:$(grep -h image: manifests/mtc-operator/v1.3.0/konveyor-operator.v1.3.0.clusterserviceversion.yaml | grep operator | sort -u | awk -F ':' '{ print $NF }') operator-yaml:latest"
+- "docker cp $(docker create operator-yaml:latest ):/operator.yml ./"
+- "docker cp $(docker create operator-yaml:latest ):/controller-3.yml ./"
+- "sed -i s/registry.redhat.io/docker-registry.default.svc:5000/g operator.yml"
+- "sed -i s/rhmtc/mirrored-images/g operator.yml"
+- "sed -i s/:v1.2/@sha256:$(grep -h image: manifests/mtc-operator/v1.3.0/konveyor-operator.v1.3.0.clusterserviceversion.yaml | grep operator | sort -u | awk -F ':' '{ print $NF }')/g operator.yml"
+- "cp operator.yml {{ playbook_dir }}"
+- "cp controller-3.yml {{ playbook_dir }}"
