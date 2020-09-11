@@ -40,6 +40,6 @@ post_commands:
 - "docker cp $(docker create operator-yaml:latest ):/controller-3.yml ./"
 - "sed -i s/registry.redhat.io/docker-registry.default.svc:5000/g operator.yml"
 - "sed -i s/rhmtc/mirrored-images/g operator.yml"
-- "sed -i s/:v1.2/@sha256:$(grep -h image: manifests/mtc-operator/v1.3.0/konveyor-operator.v1.3.0.clusterserviceversion.yaml | grep operator | sort -u | awk -F ':' '{ print $NF }')/g operator.yml"
+- "sed -i s/:v1.3.0/@sha256:$(grep -h image: manifests/mtc-operator/v1.3.0/konveyor-operator.v1.3.0.clusterserviceversion.yaml | grep operator | sort -u | awk -F ':' '{ print $NF }')/g operator.yml"
 - "cp operator.yml {{ playbook_dir }}"
 - "cp controller-3.yml {{ playbook_dir }}"
