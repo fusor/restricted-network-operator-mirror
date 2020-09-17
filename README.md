@@ -5,10 +5,53 @@
 The ansible tasks in this repo are intended to help with the task of mirroring images to a disconnected or restricted network OpenShift install.
 
 ## Prequisites
-This playbook has only been tested on Fedora. It may or may not work on other Linux distributions. CentOS 7 is known not to work because the python-jinja2 package is too old. It may be possible to circumvent this by installing a newer version using pip, but this is generally inadvisable because it can cause problems wtih dnf/yum updates.
+This playbook has only been tested on Fedora and MacOS. It may or may not work on other Linux distributions. CentOS 7 is known not to work because the python-jinja2 package is too old. It may be possible to circumvent this by installing a newer version using pip, but this is generally inadvisable because it can cause problems wtih dnf/yum updates.
 
-* Install python3-openshift, jq, bsdtar, ansible, and moby-engine or docker-ce. For Fedora:
-  * `sudo dnf -y install python3-openshift python3-docker jq bsdtar ansible moby-engine`
+* Fedora
+  * Install python3-openshift, jq, bsdtar, ansible, and moby-engine or docker-ce. For Fedora:
+    * `sudo dnf -y install python3-openshift python3-docker jq bsdtar ansible moby-engine`
+
+* MacOS
+  * Assumes docker is installed on MacOS and docker cli tools available from terminal
+    * Check your `~/.docker/config.json` on your MacOS machine, direct host, not the docker VM
+       * After you run the `docker login ....` commands later in this doc you will want to make sure that the auth tokens are stored in your `~/.docker/config.json`, you should see explicit entries like below.  If the `auth` values are empty, check if you have a 'credsStore' entry, if you do delete it.
+          * For example, I had a "credsStore": "desktop", entry which was breaking me, I removed the entry and was working after.
+
+          "auths": {
+		        "quay.io": {
+			         "auth": "amVkfoosomething3NyE="
+		         },
+		         "registry.redhat.io": {
+			         "auth": "afoovalue2zOnJzNzc="
+		         },
+		         "registry.stage.redhat.io": {
+			         "auth": "cmVmorerandomdA=="
+		         }
+	        },
+
+
+    * Add an insecure-registries entry for the registry we will create for your OCP 3 cluster, example below
+       * Pattern of `docker-registry-default.apps.$OCP3_CLUSTER_HOSTNAME`
+       * Docker -> Preferences -> Docker Engine and add the entry similar to below
+
+           {
+             "debug": true,
+             "experimental": false,
+             "insecure-registries": [
+             "docker-registry-default.apps.jwm0915c-ocp3lab.mg.dog8code.com"
+             ]
+            }
+
+  * `brew install jq gnu-sed`
+      * We want to use 'gnu-sed' to keep same invocation syntax as for Linux
+      * export PATH="/usr/local/opt/gnu-sed/libexec/gnubin:$PATH"
+         * See for some more context:  https://gist.github.com/andre3k1/e3a1a7133fded5de5a9ee99c87c6fa0d
+  * Virtual Environment usage
+    * `python3 -m venv env`
+    * `source env/bin/activate`
+    * `pip3 install -r requirements.txt`
+        * To update any requirements
+            * `pip3 freeze > requirements.txt`
 
 * Login to registry.redhat.io
   * These are the same credentials you log into https://access.redhat.com
@@ -18,10 +61,21 @@ This playbook has only been tested on Fedora. It may or may not work on other Li
   * With Openshift 4 a kubeconfig file is created. You can export this in your `.bashrc` or elsewhere
   * For example: `export KUBECONFIG=/home/$USER/.agnosticd/ocp4/ocp4-workshop_ocp4_kubeconfig`
 
+
 ## Instructions
 ### Mirror Operator
 * Create or copy an example config.yml into place if you haven't already.
+  * Example for OCP 4:
+    * `ln -s example-configs/config.yml.cam-operator-1.3.0-mtcmetadata-example config.yml`
+  * Example for OCP 3:
+    * `ln -s example-configs/config.yml.cam-operator-1.3.0-mtcmetadata-nonolm-example config.yml`
+* Remember to be logged into the correct OCP 3 or OCP 4 cluster you want to run against and have KUBECONFIG set correctly
 * `ansible-playbook mirror.yml`
+* For OCP 4
+  * Complete rest of workflow with OLM
+* For OCP 3
+  * `oc create -f operator.yml` - this be generated for you at end of run of 'nonolm' config
+  * `oc create -f controller-3.yml`
 
 ### Config Options
 * Update `local_registry` with the local/internal registry you wish to use for mirroring images
