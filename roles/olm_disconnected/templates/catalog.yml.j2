@@ -6,4 +6,4 @@ metadata:
 spec:
   displayName: Custom Catalog
   sourceType: grpc
-  image: "{{ internal_registry }}/{{ deployment_namespace }}/custom-registry:latest"
+  image: "{{ internal_registry }}/{{ deployment_namespace }}/custom-registry@{{ build.resources[0].status.output.to.imageDigest }}"

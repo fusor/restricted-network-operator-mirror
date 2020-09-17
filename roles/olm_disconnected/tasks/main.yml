@@ -184,6 +184,14 @@
     args:
       chdir: "{{ tmp_dir.path }}"
 
+  - name: Get build
+    k8s_info:
+      kind: build
+      api: build.openshift.io/v1
+      name: custom-registry-2
+      namespace: openshift-migration
+    register: build
+
   - name: Create custom registry
     k8s:
       state: present
